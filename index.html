@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REACT OR DRINK</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* CRT Scanlines Overlay */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+        }
+
+        /* Screen Flicker Effect */
+        .screen-flicker {
+            animation: flicker 0.15s ease-out;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Screen Flash */
+        .screen-flash {
+            animation: flash 0.3s ease-out;
+        }
+        @keyframes flash {
+            0% { filter: brightness(3); }
+            100% { filter: brightness(1); }
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+        }
+
+        #webcam { position: absolute; opacity: 0; pointer-events: none; }
+
+        /* Arcade Cabinet Frame */
+        .cabinet-frame {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 8px solid #222;
+            box-shadow:
+                inset 0 0 50px rgba(0, 255, 255, 0.1),
+                0 0 30px rgba(255, 0, 255, 0.2);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* ============ SETUP SCREEN ============ */
+        #setup-screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .title {
+            font-size: 52px;
+            color: #00ffff;
+            text-shadow:
+                4px 4px 0 #ff00ff,
+                0 0 20px #00ffff,
+                0 0 40px #00ffff,
+                0 0 80px #00ffff;
+            letter-spacing: 4px;
+            margin-bottom: 5px;
+            animation: titlePulse 2s ease-in-out infinite;
+        }
+        @keyframes titlePulse {
+            0%, 100% { text-shadow: 4px 4px 0 #ff00ff, 0 0 20px #00ffff, 0 0 40px #00ffff; }
+            50% { text-shadow: 4px 4px 0 #ff00ff, 0 0 30px #00ffff, 0 0 60px #00ffff, 0 0 100px #00ffff; }
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+            margin-bottom: 30px;
+            letter-spacing: 6px;
+        }
+
+        .insert-coin {
+            font-size: 12px;
+            color: #ffcc00;
+            animation: blink 1s step-end infinite;
+            margin-bottom: 30px;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Instructions Box */
+        .instructions-box {
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #00ffff;
+            padding: 25px 40px;
+            margin-bottom: 25px;
+            max-width: 700px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .instructions-title {
+            font-size: 14px;
+            color: #00ffff;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .instruction-line {
+            font-size: 10px;
+            color: #888;
+            margin: 12px 0;
+            line-height: 1.8;
+        }
+        .instruction-line .cmd {
+            color: #00ff00;
+        }
+        .instruction-line .warn {
+            color: #ff0000;
+        }
+        .instruction-line .hl {
+            color: #ffcc00;
+        }
+
+        /* Drinking Rules */
+        .rules-box {
+            background: rgba(255, 0, 255, 0.1);
+            border: 2px solid #ff00ff;
+            padding: 20px 30px;
+            margin-bottom: 25px;
+            max-width: 600px;
+        }
+
+        .rules-title {
+            font-size: 11px;
+            color: #ff00ff;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .rule-line {
+            font-size: 9px;
+            color: #aaa;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .rule-line .penalty {
+            color: #ffcc00;
+        }
+
+        /* Player Setup */
+        .player-setup {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+
+        .player-label {
+            font-size: 12px;
+            color: #fff;
+        }
+
+        .player-count {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .player-count button {
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            font-family: 'Press Start 2P', monospace;
+            background: #222;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .player-count button:hover {
+            background: #00ffff;
+            color: #000;
+        }
+
+        .player-count .count {
+            font-size: 28px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            width: 50px;
+            text-align: center;
+        }
+
+        /* Mode Selection */
+        .mode-select {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .mode-btn {
+            padding: 20px 25px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #333;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 160px;
+            text-align: center;
+        }
+        .mode-btn:hover, .mode-btn.selected {
+            border-color: #00ffff;
+            color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+        .mode-btn.chaos-btn.selected, .mode-btn.chaos-btn:hover {
+            border-color: #ff00ff;
+            color: #ff00ff;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+            animation: chaosPulse 1s infinite;
+        }
+        @keyframes chaosPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 255, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 0, 255, 0.8), 0 0 60px rgba(0, 255, 255, 0.4); }
+        }
+
+        .mode-btn .mode-name {
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+        .mode-btn .mode-desc {
+            font-size: 7px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        #start-btn {
+            padding: 20px 60px;
+            font-size: 16px;
+            font-family: 'Press Start 2P', monospace;
+            background: linear-gradient(180deg, #00ffff, #0088aa);
+            color: #000;
+            border: none;
+            cursor: pointer;
+            text-shadow: none;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            transition: all 0.2s;
+        }
+        #start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.8);
+        }
+
+        /* ============ GAME SCREEN ============ */
+        #game-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+
+        /* Prompt Area */
+        .prompt-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 50;
+        }
+
+        .prompt-text {
+            font-size: 72px;
+            color: #00ffff;
+            text-shadow:
+                0 0 20px #00ffff,
+                0 0 40px #00ffff,
+                0 0 80px #00ffff;
+            margin-bottom: 20px;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+        .prompt-text.show {
+            opacity: 1;
+        }
+        .prompt-text.fake {
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+            animation: fakeShake 0.1s infinite;
+        }
+        @keyframes fakeShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        .prompt-subtitle {
+            font-size: 14px;
+            color: #ff00ff;
+            opacity: 0;
+        }
+        .prompt-subtitle.show {
+            opacity: 1;
+        }
+
+        /* Hand Icons */
+        .hand-icons {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+            opacity: 0;
+        }
+        .hand-icons.show {
+            opacity: 1;
+        }
+
+        .hand-icon {
+            width: 80px;
+            height: 80px;
+            background: #222;
+            border: 3px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            transition: all 0.2s;
+        }
+        .hand-icon.active {
+            border-color: #00ff00;
+            box-shadow: 0 0 20px #00ff00;
+            background: rgba(0, 255, 0, 0.2);
+        }
+        .hand-icon.required {
+            border-color: #00ffff;
+            box-shadow: 0 0 30px #00ffff;
+            animation: iconPulse 0.5s infinite;
+        }
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Countdown */
+        .countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 150px;
+            color: #ffcc00;
+            text-shadow: 0 0 50px #ffcc00;
+            opacity: 0;
+            z-index: 60;
+        }
+        .countdown.show {
+            opacity: 1;
+            animation: countPop 0.5s ease-out;
+        }
+        @keyframes countPop {
+            0% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        /* Reaction Timer Bar */
+        .timer-bar-container {
+            position: absolute;
+            bottom: 320px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 20px;
+            background: #222;
+            border: 2px solid #444;
+        }
+
+        .timer-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffcc00, #ff0000);
+            width: 100%;
+            transition: width 0.05s linear;
+        }
+
+        /* Player Status Grid */
+        .player-grid {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+        }
+
+        .player-slot {
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #333;
+            padding: 15px 25px;
+            text-align: center;
+            min-width: 120px;
+            transition: all 0.3s;
+        }
+        .player-slot.active {
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        .player-slot.loser {
+            border-color: #ff0000;
+            background: rgba(255, 0, 0, 0.2);
+        }
+        .player-slot.safe {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+        .player-slot.eliminated {
+            border-color: #666;
+            opacity: 0.4;
+        }
+
+        .player-name {
+            font-size: 10px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .player-drinks {
+            font-size: 16px;
+            color: #ffcc00;
+        }
+
+        .player-status {
+            font-size: 8px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        /* Webcam Preview */
+        #webcam-area {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        #webcam-preview {
+            width: 400px;
+            height: 280px;
+            border: 4px solid #00ffff;
+            overflow: hidden;
+            position: relative;
+            box-shadow:
+                0 0 20px rgba(0, 255, 255, 0.4),
+                inset 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        #webcam-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        /* Hand Indicators on Webcam */
+        .hand-indicator {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            pointer-events: none;
+            display: none;
+            transform: translate(-50%, -50%);
+            transition: all 0.1s;
+        }
+        #hand-left {
+            background: rgba(255, 0, 255, 0.6);
+            box-shadow: 0 0 20px #ff00ff;
+        }
+        #hand-right {
+            background: rgba(0, 255, 255, 0.6);
+            box-shadow: 0 0 20px #00ffff;
+        }
+
+        .hand-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+
+        /* Result Overlay */
+        .result-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            text-align: center;
+            opacity: 0;
+            z-index: 70;
+            pointer-events: none;
+        }
+        .result-overlay.show {
+            opacity: 1;
+            animation: resultPop 1.5s ease-out forwards;
+        }
+        @keyframes resultPop {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            40% { transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; }
+            100% { opacity: 0; transform: translate(-50%, -60%) scale(0.8); }
+        }
+
+        .result-overlay.wrong {
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000;
+        }
+        .result-overlay.correct {
+            color: #00ff00;
+            text-shadow: 0 0 30px #00ff00;
+        }
+        .result-overlay.pathetic {
+            color: #ff00ff;
+            text-shadow: 0 0 40px #ff00ff;
+            animation: patheticShake 1.5s ease-out forwards;
+        }
+        @keyframes patheticShake {
+            0% { transform: translate(-50%, -50%) scale(0.5) rotate(0deg); opacity: 0; }
+            10% { transform: translate(-50%, -50%) scale(1.2) rotate(-5deg); opacity: 1; }
+            20% { transform: translate(-50%, -50%) scale(1) rotate(5deg); }
+            30% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
+            40% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Round Counter */
+        .round-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+        .round-display .round-num {
+            color: #00ffff;
+            font-size: 20px;
+        }
+
+        /* Score/Shame Board */
+        .shame-board {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ff00ff;
+            padding: 15px;
+            min-width: 150px;
+        }
+
+        .shame-title {
+            font-size: 8px;
+            color: #ff00ff;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .shame-line {
+            font-size: 8px;
+            color: #fff;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .shame-line .drinks {
+            color: #ffcc00;
+        }
+
+        /* ============ WIN SCREEN ============ */
+        #win-screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+        }
+
+        .game-over-text {
+            font-size: 48px;
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000;
+            margin-bottom: 10px;
+            animation: gameOverPulse 1s infinite;
+        }
+        @keyframes gameOverPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .loser-text {
+            font-size: 24px;
+            color: #ffcc00;
+            margin-bottom: 30px;
+        }
+
+        .final-stats {
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #00ffff;
+            padding: 30px 50px;
+            margin-bottom: 30px;
+        }
+
+        .stat-line {
+            font-size: 12px;
+            color: #fff;
+            margin: 12px 0;
+        }
+        .stat-line .value {
+            color: #00ffff;
+        }
+
+        .roast-text {
+            font-size: 10px;
+            color: #ff00ff;
+            max-width: 500px;
+            text-align: center;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        #play-again-btn {
+            padding: 18px 50px;
+            font-size: 14px;
+            font-family: 'Press Start 2P', monospace;
+            background: linear-gradient(180deg, #ff00ff, #aa0088);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+        }
+        #play-again-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Loading */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            color: #00ffff;
+            z-index: 400;
+            background: #000;
+            padding: 30px 50px;
+            border: 3px solid #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <video id="webcam" autoplay playsinline></video>
+        <div class="scanlines"></div>
+        <div class="cabinet-frame"></div>
+
+        <!-- Setup Screen -->
+        <div id="setup-screen">
+            <div class="title">REACT</div>
+            <div class="subtitle">OR DRINK</div>
+            <div class="insert-coin">- INSERT DIGNITY TO CONTINUE -</div>
+
+            <div class="instructions-box">
+                <div class="instructions-title">// HOW TO NOT EMBARRASS YOURSELF //</div>
+                <p class="instruction-line">
+                    <span class="cmd">1.</span> A prompt appears. It tells you what to do with your hands.
+                </p>
+                <p class="instruction-line">
+                    <span class="cmd">2.</span> Do the thing. <span class="hl">LAST PERSON</span> to do it correctly <span class="warn">DRINKS</span>.
+                </p>
+                <p class="instruction-line">
+                    <span class="cmd">3.</span> <span class="warn">RED PROMPTS</span> are fake. Do nothing. Move and you drink.
+                </p>
+                <p class="instruction-line">
+                    <span class="cmd">4.</span> It gets faster. You will fail. We will laugh.
+                </p>
+            </div>
+
+            <div class="rules-box">
+                <div class="rules-title">🍺 DRINKING PROTOCOL 🍺</div>
+                <div class="rule-line">
+                    <span>Last to react</span>
+                    <span class="penalty">1 DRINK</span>
+                </div>
+                <div class="rule-line">
+                    <span>Moved on fake prompt</span>
+                    <span class="penalty">2 DRINKS</span>
+                </div>
+                <div class="rule-line">
+                    <span>Wrong gesture entirely</span>
+                    <span class="penalty">2 DRINKS + SHAME</span>
+                </div>
+                <div class="rule-line">
+                    <span>Last 3 rounds in a row</span>
+                    <span class="penalty">FINISH IT</span>
+                </div>
+                <div class="rule-line">
+                    <span>Eliminated (Sudden Death)</span>
+                    <span class="penalty">CHUG + SIT DOWN</span>
+                </div>
+            </div>
+
+            <div class="player-setup">
+                <span class="player-label">VICTIMS:</span>
+                <div class="player-count">
+                    <button onclick="adjustPlayers(-1)">-</button>
+                    <span class="count" id="player-count">4</span>
+                    <button onclick="adjustPlayers(1)">+</button>
+                </div>
+            </div>
+
+            <div class="mode-select">
+                <button class="mode-btn selected" data-mode="classic">
+                    <div class="mode-name">CLASSIC</div>
+                    <div class="mode-desc">10 ROUNDS<br>MOST DRINKS LOSES</div>
+                </button>
+                <button class="mode-btn" data-mode="sudden">
+                    <div class="mode-name">SUDDEN DEATH</div>
+                    <div class="mode-desc">WRONG = ELIMINATED<br>LAST ONE STANDING</div>
+                </button>
+                <button class="mode-btn chaos-btn" data-mode="chaos">
+                    <div class="mode-name">CHAOS</div>
+                    <div class="mode-desc">FAKES + SPEED<br>GOOD LUCK</div>
+                </button>
+            </div>
+
+            <button id="start-btn" onclick="startGame()">START GAME</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen">
+            <div class="round-display">
+                ROUND <span class="round-num" id="round-num">1</span>
+            </div>
+
+            <div class="shame-board">
+                <div class="shame-title">SHAME BOARD</div>
+                <div id="shame-list"></div>
+            </div>
+
+            <div class="player-grid" id="player-grid"></div>
+
+            <div class="prompt-area">
+                <div class="countdown" id="countdown"></div>
+                <div class="prompt-text" id="prompt-text"></div>
+                <div class="prompt-subtitle" id="prompt-subtitle"></div>
+                <div class="hand-icons" id="hand-icons">
+                    <div class="hand-icon" id="icon-left">👈</div>
+                    <div class="hand-icon" id="icon-right">👉</div>
+                </div>
+            </div>
+
+            <div class="result-overlay" id="result-overlay"></div>
+
+            <div class="timer-bar-container">
+                <div class="timer-bar" id="timer-bar"></div>
+            </div>
+
+            <!-- Webcam Area -->
+            <div id="webcam-area">
+                <div id="webcam-preview">
+                    <video id="preview-video" autoplay playsinline muted></video>
+                    <div class="hand-indicator" id="hand-left">
+                        <span class="hand-label">LEFT</span>
+                    </div>
+                    <div class="hand-indicator" id="hand-right">
+                        <span class="hand-label">RIGHT</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Win Screen -->
+        <div id="win-screen">
+            <div class="game-over-text">GAME OVER</div>
+            <div class="loser-text" id="loser-text">PLAYER 3 IS THE BIGGEST DISAPPOINTMENT</div>
+            <div class="final-stats">
+                <p class="stat-line">ROUNDS PLAYED: <span class="value" id="stat-rounds">0</span></p>
+                <p class="stat-line">TOTAL DRINKS DISTRIBUTED: <span class="value" id="stat-drinks">0</span></p>
+                <p class="stat-line">FASTEST REACTION: <span class="value" id="stat-fastest">0ms</span></p>
+                <p class="stat-line">MOST SHAMED: <span class="value" id="stat-shamed">PLAYER 1</span></p>
+            </div>
+            <p class="roast-text" id="roast-text"></p>
+            <button id="play-again-btn" onclick="resetGame()">INSERT COIN</button>
+        </div>
+
+        <div id="loading">CALIBRATING SHAME SENSORS...</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+    <script>
+        // ============ CONFIGURATION ============
+        const PROMPTS = {
+            LEFT: { text: 'LEFT!', icon: 'left', check: (h) => h.left && !h.right },
+            RIGHT: { text: 'RIGHT!', icon: 'right', check: (h) => h.right && !h.left },
+            BOTH: { text: 'BOTH!', icon: 'both', check: (h) => h.left && h.right },
+            NONE: { text: 'DOWN!', icon: 'none', check: (h) => !h.left && !h.right }
+        };
+
+        const ROASTS = {
+            slow: [
+                "Your reflexes called. They're filing for divorce.",
+                "Glaciers move faster than you.",
+                "Did you fall asleep or is this your best?",
+                "The 'react' part was not optional.",
+                "You move like you're buffering on dial-up."
+            ],
+            wrong: [
+                "Left. Right. It's not that hard. Apparently it is.",
+                "Did you learn left and right from a different planet?",
+                "Wrong. Just... impressively wrong.",
+                "Your brain and hands are not on speaking terms.",
+                "That was confidently incorrect."
+            ],
+            fake: [
+                "IT WAS RED. RED MEANS DON'T.",
+                "You fell for the oldest trick. Pathetic.",
+                "Fake prompt. Real disappointment.",
+                "Did the red color confuse you?",
+                "It literally said DON'T MOVE."
+            ],
+            winner: [
+                "You won by default. Everyone else was worse.",
+                "Congratulations on being the least terrible.",
+                "Winner winner. Still a sinner.",
+                "You survived. Barely.",
+                "The bar was low and you cleared it. Barely."
+            ],
+            loser: [
+                "You are the designated disappointment.",
+                "Your ancestors are watching. They're not proud.",
+                "You had one job. Several times. Failed all of them.",
+                "Somewhere, a participation trophy is crying for you.",
+                "You lost to people who were also drinking. Think about that."
+            ]
+        };
+
+        const CONFIGS = {
+            classic: {
+                rounds: 10,
+                baseTime: 3000,
+                timeDecrease: 150,
+                minTime: 1200,
+                fakeChance: 0,
+                speedRounds: false
+            },
+            sudden: {
+                rounds: 999,
+                baseTime: 2500,
+                timeDecrease: 100,
+                minTime: 1000,
+                fakeChance: 0.15,
+                speedRounds: false
+            },
+            chaos: {
+                rounds: 15,
+                baseTime: 2500,
+                timeDecrease: 200,
+                minTime: 800,
+                fakeChance: 0.25,
+                speedRounds: true
+            }
+        };
+
+        // ============ GAME STATE ============
+        const state = {
+            mode: 'classic',
+            config: CONFIGS.classic,
+            playerCount: 4,
+            players: [],
+            round: 0,
+            phase: 'waiting', // waiting, countdown, prompt, judging, result
+            currentPrompt: null,
+            isFake: false,
+            reactionTime: 0,
+            reactionStart: 0,
+            timerInterval: null,
+            running: false,
+            hands: {
+                left: { up: false, x: 0, y: 0 },
+                right: { up: false, x: 0, y: 0 }
+            },
+            playerStates: [], // tracks who did what this round
+            fastestReaction: 9999,
+            totalDrinks: 0
+        };
+
+        const video = document.getElementById('webcam');
+        const previewVideo = document.getElementById('preview-video');
+
+        // ============ PLAYER SETUP ============
+        function adjustPlayers(delta) {
+            state.playerCount = Math.max(2, Math.min(8, state.playerCount + delta));
+            document.getElementById('player-count').textContent = state.playerCount;
+        }
+
+        function createPlayers() {
+            state.players = [];
+            for (let i = 0; i < state.playerCount; i++) {
+                state.players.push({
+                    id: i,
+                    name: `P${i + 1}`,
+                    drinks: 0,
+                    eliminated: false,
+                    consecutiveLosses: 0,
+                    reacted: false,
+                    correct: false,
+                    reactionTime: 0
+                });
+            }
+            renderPlayerGrid();
+            renderShameBoard();
+        }
+
+        function renderPlayerGrid() {
+            const grid = document.getElementById('player-grid');
+            grid.innerHTML = state.players.map(p => `
+                <div class="player-slot ${p.eliminated ? 'eliminated' : ''}" id="slot-${p.id}">
+                    <div class="player-name">${p.name}</div>
+                    <div class="player-drinks">🍺 ${p.drinks}</div>
+                    <div class="player-status" id="status-${p.id}">READY</div>
+                </div>
+            `).join('');
+        }
+
+        function renderShameBoard() {
+            const sorted = [...state.players].sort((a, b) => b.drinks - a.drinks);
+            document.getElementById('shame-list').innerHTML = sorted.slice(0, 4).map(p => `
+                <div class="shame-line">
+                    <span>${p.name}</span>
+                    <span class="drinks">${p.drinks}</span>
+                </div>
+            `).join('');
+        }
+
+        // ============ MODE SELECTION ============
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                state.mode = btn.dataset.mode;
+                state.config = CONFIGS[state.mode];
+            });
+        });
+
+        // ============ GAME FLOW ============
+        function startGame() {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+
+            state.running = true;
+            state.round = 0;
+            state.fastestReaction = 9999;
+            state.totalDrinks = 0;
+
+            createPlayers();
+            startRound();
+        }
+
+        function startRound() {
+            state.round++;
+            document.getElementById('round-num').textContent = state.round;
+
+            // Check end conditions
+            if (state.mode === 'classic' && state.round > state.config.rounds) {
+                endGame();
+                return;
+            }
+
+            const alivePlayers = state.players.filter(p => !p.eliminated);
+            if (state.mode === 'sudden' && alivePlayers.length <= 1) {
+                endGame();
+                return;
+            }
+
+            // Reset player states for this round
+            state.players.forEach(p => {
+                p.reacted = false;
+                p.correct = false;
+                p.reactionTime = 0;
+                if (!p.eliminated) {
+                    document.getElementById(`status-${p.id}`).textContent = 'READY';
+                    document.getElementById(`slot-${p.id}`).className = 'player-slot';
+                }
+            });
+
+            // Start countdown
+            state.phase = 'countdown';
+            showCountdown();
+        }
+
+        function showCountdown() {
+            const countEl = document.getElementById('countdown');
+            const promptEl = document.getElementById('prompt-text');
+            const subtitleEl = document.getElementById('prompt-subtitle');
+            const iconsEl = document.getElementById('hand-icons');
+
+            promptEl.classList.remove('show');
+            subtitleEl.classList.remove('show');
+            iconsEl.classList.remove('show');
+
+            let count = 3;
+            countEl.textContent = count;
+            countEl.classList.add('show');
+
+            const countInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countEl.textContent = count;
+                    countEl.classList.remove('show');
+                    void countEl.offsetWidth;
+                    countEl.classList.add('show');
+                } else {
+                    clearInterval(countInterval);
+                    countEl.classList.remove('show');
+                    showPrompt();
+                }
+            }, 600);
+        }
+
+        function showPrompt() {
+            state.phase = 'prompt';
+
+            // Pick random prompt
+            const promptKeys = Object.keys(PROMPTS);
+            const key = promptKeys[Math.floor(Math.random() * promptKeys.length)];
+            state.currentPrompt = { key, ...PROMPTS[key] };
+
+            // Determine if fake (red prompt)
+            state.isFake = Math.random() < state.config.fakeChance;
+
+            const promptEl = document.getElementById('prompt-text');
+            const subtitleEl = document.getElementById('prompt-subtitle');
+            const iconsEl = document.getElementById('hand-icons');
+
+            promptEl.textContent = state.currentPrompt.text;
+            promptEl.classList.remove('fake');
+
+            if (state.isFake) {
+                promptEl.classList.add('fake');
+                subtitleEl.textContent = "DON'T MOVE!";
+            } else {
+                subtitleEl.textContent = '';
+            }
+
+            promptEl.classList.add('show');
+            subtitleEl.classList.add('show');
+            iconsEl.classList.add('show');
+
+            // Update icons
+            updatePromptIcons();
+
+            // Start reaction timer
+            state.reactionStart = Date.now();
+            const reactionWindow = Math.max(
+                state.config.minTime,
+                state.config.baseTime - (state.round * state.config.timeDecrease)
+            );
+
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.transition = 'none';
+            timerBar.style.width = '100%';
+            void timerBar.offsetWidth;
+            timerBar.style.transition = `width ${reactionWindow}ms linear`;
+            timerBar.style.width = '0%';
+
+            // End round after time
+            state.timerInterval = setTimeout(() => {
+                judgeRound();
+            }, reactionWindow);
+
+            state.phase = 'reacting';
+        }
+
+        function updatePromptIcons() {
+            const left = document.getElementById('icon-left');
+            const right = document.getElementById('icon-right');
+
+            left.classList.remove('required', 'active');
+            right.classList.remove('required', 'active');
+
+            if (state.isFake) return;
+
+            switch (state.currentPrompt.icon) {
+                case 'left':
+                    left.classList.add('required');
+                    break;
+                case 'right':
+                    right.classList.add('required');
+                    break;
+                case 'both':
+                    left.classList.add('required');
+                    right.classList.add('required');
+                    break;
+                case 'none':
+                    // Neither required
+                    break;
+            }
+        }
+
+        function checkPlayerReaction() {
+            if (state.phase !== 'reacting') return;
+
+            const handState = {
+                left: state.hands.left.up,
+                right: state.hands.right.up
+            };
+
+            // Update icons based on current hand state
+            document.getElementById('icon-left').classList.toggle('active', handState.left);
+            document.getElementById('icon-right').classList.toggle('active', handState.right);
+
+            // For now, simulate single player checking (in real multiplayer, each player would have their own tracking)
+            // This tracks the "current player" state
+            const isCorrect = state.isFake
+                ? (!handState.left && !handState.right) // Fake = don't move
+                : state.currentPrompt.check(handState);
+
+            // Store state for judging
+            state.playerStates = [{
+                correct: isCorrect,
+                handState: { ...handState },
+                reactionTime: Date.now() - state.reactionStart
+            }];
+        }
+
+        function judgeRound() {
+            state.phase = 'judging';
+            clearTimeout(state.timerInterval);
+
+            const promptEl = document.getElementById('prompt-text');
+            const subtitleEl = document.getElementById('prompt-subtitle');
+            const iconsEl = document.getElementById('hand-icons');
+            const resultEl = document.getElementById('result-overlay');
+
+            promptEl.classList.remove('show');
+            subtitleEl.classList.remove('show');
+            iconsEl.classList.remove('show');
+
+            // Get current hand state for final judgment
+            const handState = {
+                left: state.hands.left.up,
+                right: state.hands.right.up
+            };
+
+            const isCorrect = state.isFake
+                ? (!handState.left && !handState.right)
+                : state.currentPrompt.check(handState);
+
+            const reactionTime = Date.now() - state.reactionStart;
+
+            // For demo: randomly pick a loser from alive players
+            const alivePlayers = state.players.filter(p => !p.eliminated);
+
+            // In real implementation, track who was last/wrong
+            // For now, simulate based on hand tracking correctness
+            let loserIndex = Math.floor(Math.random() * alivePlayers.length);
+
+            // If player (camera) got it wrong, they're always the loser
+            if (!isCorrect) {
+                loserIndex = 0; // First player represents the person on camera
+            }
+
+            const loser = alivePlayers[loserIndex];
+
+            // Determine penalty
+            let drinks = 1;
+            let roastCategory = 'slow';
+            let resultText = 'TOO SLOW';
+            let resultClass = 'wrong';
+
+            if (state.isFake && (handState.left || handState.right)) {
+                drinks = 2;
+                roastCategory = 'fake';
+                resultText = 'FELL FOR IT';
+                resultClass = 'pathetic';
+            } else if (!isCorrect && !state.isFake) {
+                drinks = 2;
+                roastCategory = 'wrong';
+                resultText = 'WRONG!';
+                resultClass = 'wrong';
+            }
+
+            // Apply penalty
+            loser.drinks += drinks;
+            loser.consecutiveLosses++;
+            state.totalDrinks += drinks;
+
+            // Check for consecutive loss penalty
+            if (loser.consecutiveLosses >= 3) {
+                resultText = 'PATHETIC! FINISH IT!';
+                resultClass = 'pathetic';
+                loser.consecutiveLosses = 0;
+            }
+
+            // Reset others' consecutive losses
+            state.players.forEach(p => {
+                if (p.id !== loser.id) p.consecutiveLosses = 0;
+            });
+
+            // Sudden death elimination
+            if (state.mode === 'sudden' && !isCorrect) {
+                loser.eliminated = true;
+                resultText = `${loser.name} ELIMINATED`;
+            }
+
+            // Track fastest reaction
+            if (isCorrect && reactionTime < state.fastestReaction) {
+                state.fastestReaction = reactionTime;
+            }
+
+            // Show result
+            resultEl.textContent = resultText;
+            resultEl.className = `result-overlay ${resultClass} show`;
+
+            // Update UI
+            document.getElementById(`slot-${loser.id}`).classList.add('loser');
+            document.getElementById(`status-${loser.id}`).textContent = `+${drinks} DRINK${drinks > 1 ? 'S' : ''}`;
+
+            // Mark others as safe
+            alivePlayers.forEach(p => {
+                if (p.id !== loser.id && !p.eliminated) {
+                    document.getElementById(`slot-${p.id}`).classList.add('safe');
+                    document.getElementById(`status-${p.id}`).textContent = 'SAFE';
+                }
+            });
+
+            renderPlayerGrid();
+            renderShameBoard();
+
+            // Flash screen
+            document.getElementById('game-container').classList.add('screen-flash');
+            setTimeout(() => {
+                document.getElementById('game-container').classList.remove('screen-flash');
+            }, 300);
+
+            // Next round after delay
+            setTimeout(() => {
+                resultEl.classList.remove('show');
+                startRound();
+            }, 2500);
+        }
+
+        function endGame() {
+            state.running = false;
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('win-screen').style.display = 'flex';
+
+            // Find biggest loser
+            const sorted = [...state.players].sort((a, b) => b.drinks - a.drinks);
+            const loser = sorted[0];
+            const winner = sorted[sorted.length - 1];
+
+            document.getElementById('loser-text').textContent =
+                `${loser.name} IS THE BIGGEST DISAPPOINTMENT`;
+
+            document.getElementById('stat-rounds').textContent = state.round - 1;
+            document.getElementById('stat-drinks').textContent = state.totalDrinks;
+            document.getElementById('stat-fastest').textContent =
+                state.fastestReaction < 9999 ? `${state.fastestReaction}ms` : 'N/A';
+            document.getElementById('stat-shamed').textContent = loser.name;
+
+            // Pick roast
+            const roasts = loser.drinks > 5 ? ROASTS.loser : ROASTS.winner;
+            document.getElementById('roast-text').textContent =
+                roasts[Math.floor(Math.random() * roasts.length)];
+        }
+
+        function resetGame() {
+            document.getElementById('win-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+        }
+
+        // ============ HAND TRACKING ============
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 0,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onHandResults);
+
+        function onHandResults(results) {
+            // Reset
+            state.hands.left.up = false;
+            state.hands.right.up = false;
+
+            document.getElementById('hand-left').style.display = 'none';
+            document.getElementById('hand-right').style.display = 'none';
+
+            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                if (state.phase === 'reacting') checkPlayerReaction();
+                return;
+            }
+
+            results.multiHandLandmarks.forEach((landmarks, idx) => {
+                const wrist = landmarks[0];
+                const isUp = wrist.y < 0.45; // Hand raised threshold
+
+                // Determine which hand based on x position (mirrored)
+                const side = wrist.x > 0.5 ? 'left' : 'right';
+
+                state.hands[side].up = isUp;
+                state.hands[side].x = (1 - wrist.x) * 400; // Webcam preview width
+                state.hands[side].y = wrist.y * 280; // Webcam preview height
+
+                // Update indicator
+                const indicator = document.getElementById(`hand-${side}`);
+                indicator.style.display = 'block';
+                indicator.style.left = state.hands[side].x + 'px';
+                indicator.style.top = state.hands[side].y + 'px';
+            });
+
+            if (state.phase === 'reacting') {
+                checkPlayerReaction();
+            }
+        }
+
+        // ============ SETUP ============
+        async function setup() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, facingMode: 'user' }
+                });
+                video.srcObject = stream;
+                previewVideo.srcObject = stream;
+                await new Promise(r => { video.onloadedmetadata = () => { video.play(); r(); }; });
+                previewVideo.play();
+
+                const cam = new Camera(video, {
+                    onFrame: async () => {
+                        await hands.send({ image: video });
+                    },
+                    width: 640,
+                    height: 480
+                });
+                await cam.start();
+
+                document.getElementById('loading').classList.add('hidden');
+            } catch (e) {
+                document.getElementById('loading').textContent = 'CAMERA ERROR: ' + e.message;
+            }
+        }
+
+        setup();
+    </script>
+</body>
+</html>
