@@ -7,481 +7,102 @@
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            background: #0a0a0a;
+            background: #0a0a0f;
             overflow: hidden;
             font-family: 'Press Start 2P', monospace;
-        }
-
-        /* CRT Scanlines Overlay */
-        .scanlines {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 1000;
-            background: repeating-linear-gradient(
-                0deg,
-                rgba(0, 0, 0, 0.15),
-                rgba(0, 0, 0, 0.15) 1px,
-                transparent 1px,
-                transparent 2px
-            );
-        }
-
-        /* Screen Flicker Effect */
-        .screen-flicker {
-            animation: flicker 0.15s ease-out;
-        }
-        @keyframes flicker {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
-
-        /* Screen Flash */
-        .screen-flash {
-            animation: flash 0.3s ease-out;
-        }
-        @keyframes flash {
-            0% { filter: brightness(3); }
-            100% { filter: brightness(1); }
         }
 
         #game-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
         }
 
-        #webcam { position: absolute; opacity: 0; pointer-events: none; }
-
-        /* Arcade Cabinet Frame */
-        .cabinet-frame {
+        /* Game Show Stage Background */
+        .stage-bg {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            border: 8px solid #222;
-            box-shadow:
-                inset 0 0 50px rgba(0, 255, 255, 0.1),
-                0 0 30px rgba(255, 0, 255, 0.2);
+            background: linear-gradient(180deg,
+                #0a0015 0%,
+                #1a0a2e 30%,
+                #2d1b4e 60%,
+                #1a0a2e 100%
+            );
+        }
+
+        .stage-floor {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 25%;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0a0a15 100%);
+            border-top: 4px solid #ff00ff;
+            box-shadow: 0 -20px 60px rgba(255, 0, 255, 0.3);
+        }
+
+        .spotlight {
+            position: absolute;
+            width: 300px;
+            height: 400px;
             pointer-events: none;
-            z-index: 100;
+        }
+        .spotlight-left {
+            top: 0; left: 5%;
+            background: radial-gradient(ellipse at top, rgba(255, 0, 255, 0.15) 0%, transparent 70%);
+        }
+        .spotlight-right {
+            top: 0; right: 5%;
+            background: radial-gradient(ellipse at top, rgba(0, 255, 255, 0.15) 0%, transparent 70%);
+        }
+        .spotlight-center {
+            top: 0; left: 50%; transform: translateX(-50%);
+            width: 500px;
+            background: radial-gradient(ellipse at top, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
         }
 
-        /* ============ SETUP SCREEN ============ */
-        #setup-screen {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-        }
-
-        .title {
-            font-size: 52px;
-            color: #00ffff;
-            text-shadow:
-                4px 4px 0 #ff00ff,
-                0 0 20px #00ffff,
-                0 0 40px #00ffff,
-                0 0 80px #00ffff;
-            letter-spacing: 4px;
-            margin-bottom: 5px;
-            animation: titlePulse 2s ease-in-out infinite;
-        }
-        @keyframes titlePulse {
-            0%, 100% { text-shadow: 4px 4px 0 #ff00ff, 0 0 20px #00ffff, 0 0 40px #00ffff; }
-            50% { text-shadow: 4px 4px 0 #ff00ff, 0 0 30px #00ffff, 0 0 60px #00ffff, 0 0 100px #00ffff; }
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: #ff00ff;
-            text-shadow: 0 0 10px #ff00ff;
-            margin-bottom: 30px;
-            letter-spacing: 6px;
-        }
-
-        .insert-coin {
-            font-size: 12px;
-            color: #ffcc00;
-            animation: blink 1s step-end infinite;
-            margin-bottom: 30px;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        /* Instructions Box */
-        .instructions-box {
-            background: rgba(0, 0, 0, 0.9);
-            border: 3px solid #00ffff;
-            padding: 25px 40px;
-            margin-bottom: 25px;
-            max-width: 700px;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-        }
-
-        .instructions-title {
-            font-size: 14px;
-            color: #00ffff;
-            text-align: center;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px #00ffff;
-        }
-
-        .instruction-line {
-            font-size: 10px;
-            color: #888;
-            margin: 12px 0;
-            line-height: 1.8;
-        }
-        .instruction-line .cmd {
-            color: #00ff00;
-        }
-        .instruction-line .warn {
-            color: #ff0000;
-        }
-        .instruction-line .hl {
-            color: #ffcc00;
-        }
-
-        /* Drinking Rules */
-        .rules-box {
-            background: rgba(255, 0, 255, 0.1);
-            border: 2px solid #ff00ff;
-            padding: 20px 30px;
-            margin-bottom: 25px;
-            max-width: 600px;
-        }
-
-        .rules-title {
-            font-size: 11px;
-            color: #ff00ff;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        .rule-line {
-            font-size: 9px;
-            color: #aaa;
-            margin: 8px 0;
-            display: flex;
-            justify-content: space-between;
-        }
-        .rule-line .penalty {
-            color: #ffcc00;
-        }
-
-        /* Player Setup */
-        .player-setup {
-            display: flex;
-            align-items: center;
-            gap: 30px;
-            margin-bottom: 25px;
-        }
-
-        .player-label {
-            font-size: 12px;
-            color: #fff;
-        }
-
-        .player-count {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .player-count button {
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            font-family: 'Press Start 2P', monospace;
-            background: #222;
-            color: #00ffff;
-            border: 2px solid #00ffff;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .player-count button:hover {
-            background: #00ffff;
-            color: #000;
-        }
-
-        .player-count .count {
-            font-size: 28px;
-            color: #00ffff;
-            text-shadow: 0 0 10px #00ffff;
-            width: 50px;
-            text-align: center;
-        }
-
-        /* Mode Selection */
-        .mode-select {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .mode-btn {
-            padding: 20px 25px;
-            background: rgba(0, 0, 0, 0.9);
-            border: 3px solid #333;
-            color: #666;
-            cursor: pointer;
-            transition: all 0.3s;
-            min-width: 160px;
-            text-align: center;
-        }
-        .mode-btn:hover, .mode-btn.selected {
-            border-color: #00ffff;
-            color: #00ffff;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-        }
-        .mode-btn.chaos-btn.selected, .mode-btn.chaos-btn:hover {
-            border-color: #ff00ff;
-            color: #ff00ff;
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
-            animation: chaosPulse 1s infinite;
-        }
-        @keyframes chaosPulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 0, 255, 0.5); }
-            50% { box-shadow: 0 0 40px rgba(255, 0, 255, 0.8), 0 0 60px rgba(0, 255, 255, 0.4); }
-        }
-
-        .mode-btn .mode-name {
-            font-size: 11px;
-            margin-bottom: 8px;
-        }
-        .mode-btn .mode-desc {
-            font-size: 7px;
-            color: #888;
-            line-height: 1.6;
-        }
-
-        #start-btn {
-            padding: 20px 60px;
-            font-size: 16px;
-            font-family: 'Press Start 2P', monospace;
-            background: linear-gradient(180deg, #00ffff, #0088aa);
-            color: #000;
-            border: none;
-            cursor: pointer;
-            text-shadow: none;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
-            transition: all 0.2s;
-        }
-        #start-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.8);
-        }
-
-        /* ============ GAME SCREEN ============ */
-        #game-screen {
-            display: none;
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-        }
-
-        /* Prompt Area */
-        .prompt-area {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 50;
-        }
-
-        .prompt-text {
-            font-size: 72px;
-            color: #00ffff;
-            text-shadow:
-                0 0 20px #00ffff,
-                0 0 40px #00ffff,
-                0 0 80px #00ffff;
-            margin-bottom: 20px;
-            opacity: 0;
-            transition: opacity 0.1s;
-        }
-        .prompt-text.show {
-            opacity: 1;
-        }
-        .prompt-text.fake {
-            color: #ff0000;
-            text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
-            animation: fakeShake 0.1s infinite;
-        }
-        @keyframes fakeShake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-3px); }
-            75% { transform: translateX(3px); }
-        }
-
-        .prompt-subtitle {
-            font-size: 14px;
-            color: #ff00ff;
-            opacity: 0;
-        }
-        .prompt-subtitle.show {
-            opacity: 1;
-        }
-
-        /* Hand Icons */
-        .hand-icons {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin-top: 30px;
-            opacity: 0;
-        }
-        .hand-icons.show {
-            opacity: 1;
-        }
-
-        .hand-icon {
-            width: 80px;
-            height: 80px;
-            background: #222;
-            border: 3px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            transition: all 0.2s;
-        }
-        .hand-icon.active {
-            border-color: #00ff00;
-            box-shadow: 0 0 20px #00ff00;
-            background: rgba(0, 255, 0, 0.2);
-        }
-        .hand-icon.required {
-            border-color: #00ffff;
-            box-shadow: 0 0 30px #00ffff;
-            animation: iconPulse 0.5s infinite;
-        }
-        @keyframes iconPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        /* Countdown */
-        .countdown {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 150px;
-            color: #ffcc00;
-            text-shadow: 0 0 50px #ffcc00;
-            opacity: 0;
-            z-index: 60;
-        }
-        .countdown.show {
-            opacity: 1;
-            animation: countPop 0.5s ease-out;
-        }
-        @keyframes countPop {
-            0% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-            50% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-        }
-
-        /* Reaction Timer Bar */
-        .timer-bar-container {
-            position: absolute;
-            bottom: 320px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 400px;
-            height: 20px;
-            background: #222;
-            border: 2px solid #444;
-        }
-
-        .timer-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #00ff00, #ffcc00, #ff0000);
-            width: 100%;
-            transition: width 0.05s linear;
-        }
-
-        /* Player Status Grid */
-        .player-grid {
+        .neon-header {
             position: absolute;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            display: flex;
-            gap: 20px;
-        }
-
-        .player-slot {
-            background: rgba(0, 0, 0, 0.8);
-            border: 3px solid #333;
-            padding: 15px 25px;
             text-align: center;
-            min-width: 120px;
-            transition: all 0.3s;
+            z-index: 10;
+            display: none; /* hidden initially, shown when leaving title screen */
         }
-        .player-slot.active {
-            border-color: #00ffff;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        .neon-title {
+            font-size: 42px;
+            color: #ff00ff;
+            text-shadow:
+                0 0 10px #ff00ff,
+                0 0 20px #ff00ff,
+                0 0 40px #ff00ff,
+                3px 3px 0 #00ffff;
+            letter-spacing: 4px;
         }
-        .player-slot.loser {
-            border-color: #ff0000;
-            background: rgba(255, 0, 0, 0.2);
-        }
-        .player-slot.safe {
-            border-color: #00ff00;
-            background: rgba(0, 255, 0, 0.1);
-        }
-        .player-slot.eliminated {
-            border-color: #666;
-            opacity: 0.4;
-        }
-
-        .player-name {
-            font-size: 10px;
-            color: #fff;
-            margin-bottom: 8px;
-        }
-
-        .player-drinks {
-            font-size: 16px;
-            color: #ffcc00;
-        }
-
-        .player-status {
-            font-size: 8px;
-            color: #888;
+        .neon-sub {
+            font-size: 14px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
             margin-top: 5px;
+            letter-spacing: 6px;
         }
 
-        /* Webcam Preview */
+        /* Webcam preview */
         #webcam-area {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
         }
-
         #webcam-preview {
-            width: 400px;
-            height: 280px;
+            width: 280px;
+            height: 210px;
             border: 4px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
             overflow: hidden;
-            position: relative;
-            box-shadow:
-                0 0 20px rgba(0, 255, 255, 0.4),
-                inset 0 0 30px rgba(0, 0, 0, 0.5);
+            background: #000;
         }
         #webcam-preview video {
             width: 100%;
@@ -489,50 +110,564 @@
             object-fit: cover;
             transform: scaleX(-1);
         }
+        #video-container { position: absolute; opacity: 0; pointer-events: none; }
 
-        /* Hand Indicators on Webcam */
-        .hand-indicator {
+        .current-player-label {
+            font-size: 11px;
+            color: #000;
+            text-align: center;
+            margin-top: 10px;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            padding: 8px 15px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* ============ SCREENS ============ */
+        .screen {
             position: absolute;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 3px solid #fff;
-            pointer-events: none;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             display: none;
-            transform: translate(-50%, -50%);
-            transition: all 0.1s;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
         }
-        #hand-left {
-            background: rgba(255, 0, 255, 0.6);
-            box-shadow: 0 0 20px #ff00ff;
-        }
-        #hand-right {
-            background: rgba(0, 255, 255, 0.6);
-            box-shadow: 0 0 20px #00ffff;
+        .screen.active { display: flex; }
+
+        /* ============ TITLE SCREEN ============ */
+        #title-screen {
+            overflow-y: auto;
+            padding: 40px 20px;
+            background: linear-gradient(180deg, #0a0015 0%, #1a0a2e 50%, #0a0015 100%);
+            justify-content: flex-start;
+            align-items: center;
         }
 
-        .hand-label {
+        .title-content {
+            max-width: 1000px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .big-title {
+            font-size: 56px;
+            color: #ff00ff;
+            text-shadow:
+                0 0 20px #ff00ff,
+                0 0 40px #ff00ff,
+                0 0 80px #ff00ff,
+                4px 4px 0 #00ffff;
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+        }
+        .big-subtitle {
+            font-size: 14px;
+            color: #00ffff;
+            text-shadow: 0 0 15px #00ffff;
+            margin-bottom: 40px;
+            letter-spacing: 6px;
+        }
+
+        /* Two Column Layout */
+        .title-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+            text-align: left;
+        }
+
+        .title-section {
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid;
+            padding: 25px 30px;
+        }
+        .title-section.rules-section { border-color: #ff00ff; box-shadow: 0 0 30px rgba(255,0,255,0.2); }
+        .title-section.drinks-section { border-color: #ffcc00; box-shadow: 0 0 30px rgba(255,204,0,0.2); }
+
+        .section-header {
+            font-size: 14px;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+        .rules-section .section-header { color: #ff00ff; }
+        .drinks-section .section-header { color: #ffcc00; }
+
+        .rule-item {
+            font-size: 10px;
+            color: #ccc;
+            margin-bottom: 15px;
+            line-height: 1.8;
+            padding-left: 25px;
+            position: relative;
+        }
+        .rule-item::before {
+            content: attr(data-num);
             position: absolute;
-            bottom: -25px;
+            left: 0;
+            color: #ff00ff;
+            font-size: 12px;
+        }
+        .rule-item .hl { color: #ffcc00; }
+        .rule-item .bad { color: #ff6666; }
+        .rule-item .good { color: #66ff66; }
+        .rule-item .sass { color: #888; font-size: 9px; }
+
+        /* Drink Table */
+        .drink-table {
+            width: 100%;
+        }
+        .drink-row {
+            display: grid;
+            grid-template-columns: 60px 100px 1fr;
+            gap: 15px;
+            font-size: 10px;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+            align-items: center;
+        }
+        .drink-row:last-child { border-bottom: none; }
+        .drink-row .score { color: #00ffff; font-size: 12px; }
+        .drink-row .verdict { color: #ff00ff; }
+        .drink-row .penalty { color: #ccc; font-size: 9px; }
+
+        /* Twists Section */
+        .twists-section {
+            background: rgba(0, 0, 0, 0.7);
+            border: 3px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0,255,255,0.2);
+            padding: 25px 30px;
+            margin-bottom: 40px;
+        }
+        .twists-section .section-header { color: #00ffff; text-align: center; margin-bottom: 25px; }
+
+        .twist-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+        }
+        .twist-item {
+            text-align: center;
+        }
+        .twist-name {
+            font-size: 10px;
+            color: #ff00ff;
+            margin-bottom: 8px;
+        }
+        .twist-desc {
+            font-size: 8px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        /* Pose Guide */
+        .pose-section {
+            margin-bottom: 40px;
+        }
+        .pose-section-title {
+            font-size: 14px;
+            color: #ff00ff;
+            margin-bottom: 25px;
+            letter-spacing: 3px;
+            text-align: center;
+        }
+        .pose-guide {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+        .pose-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #333;
+            padding: 15px;
+            width: 110px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .pose-card:hover {
+            border-color: #00ffff;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,255,255,0.3);
+        }
+        .pose-icon {
+            width: 60px;
+            height: 65px;
+            margin: 0 auto 10px;
+        }
+        .pose-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+        .pose-card .pose-name {
+            font-size: 7px;
+            color: #00ffff;
+            line-height: 1.4;
+        }
+
+        #start-game-btn-title {
+            padding: 25px 80px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 18px;
+            background: linear-gradient(180deg, #ff00ff, #aa00aa);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.6);
+            transition: all 0.2s;
+        }
+        #start-game-btn-title:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 80px rgba(255, 0, 255, 0.8);
+        }
+
+        /* ============ SETUP SCREEN ============ */
+        #setup-screen .setup-box {
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid #ff00ff;
+            padding: 30px 50px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.3);
+            max-width: 500px;
+        }
+
+        .setup-title {
+            font-size: 18px;
+            color: #ff00ff;
+            margin-bottom: 20px;
+        }
+
+        .player-input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        #player-name-input {
+            flex: 1;
+            padding: 12px 15px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 12px;
+            background: #1a1a2e;
+            border: 2px solid #444;
+            color: #fff;
+            outline: none;
+        }
+        #player-name-input:focus {
+            border-color: #00ffff;
+        }
+        #add-player-btn {
+            padding: 12px 20px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 12px;
+            background: #00ffff;
+            color: #000;
+            border: none;
+            cursor: pointer;
+        }
+        #add-player-btn:hover { background: #00dddd; }
+
+        .player-list {
+            min-height: 80px;
+            margin: 15px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        .player-tag {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, #2d1b4e, #1a0a2e);
+            border: 2px solid #ff00ff;
+            color: #fff;
+            font-size: 10px;
+            padding: 10px 15px;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+        }
+        .player-tag .remove-btn {
+            margin-left: 12px;
+            color: #ff6666;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .player-tag .remove-btn:hover { color: #ff0000; }
+
+        .player-count-info {
+            font-size: 9px;
+            color: #888;
+            margin-bottom: 15px;
+        }
+
+        #start-game-btn {
+            padding: 18px 40px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 14px;
+            background: linear-gradient(180deg, #ff00ff, #aa00aa);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
+            margin-top: 10px;
+        }
+        #start-game-btn:hover { transform: scale(1.05); }
+        #start-game-btn:disabled {
+            background: #444;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* ============ WHEEL SCREEN ============ */
+        #wheel-screen {
+            background: rgba(0, 0, 0, 0.95);
+        }
+
+        .wheel-title {
+            font-size: 28px;
+            color: #ffcc00;
+            text-shadow: 0 0 30px #ffcc00, 0 0 60px #ff6600;
+            margin-bottom: 40px;
+            letter-spacing: 4px;
+        }
+
+        .wheel-wrapper {
+            position: relative;
+            width: 350px;
+            height: 350px;
+        }
+
+        .wheel-container {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 8px solid #ff00ff;
+            box-shadow: 0 0 40px rgba(255, 0, 255, 0.4), inset 0 0 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .wheel-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+
+        .wheel-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -20px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 8px;
-            color: #fff;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 2px 8px;
-            white-space: nowrap;
+            z-index: 20;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid #ffcc00;
+            filter: drop-shadow(0 0 10px #ffcc00);
         }
 
-        /* Result Overlay */
+        .wheel-center-hub {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2d1b4e 0%, #0a0015 100%);
+            border: 4px solid #ffcc00;
+            border-radius: 50%;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wheel-center-hub::after {
+            content: '?';
+            font-size: 20px;
+            color: #ffcc00;
+            text-shadow: 0 0 10px #ffcc00;
+        }
+
+        .wheel-result {
+            font-size: 20px;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff;
+            margin-top: 40px;
+            min-height: 35px;
+        }
+
+        /* ============ GAME SCREEN ============ */
+        #game-screen {
+            z-index: 90;
+        }
+
+        .round-info {
+            position: absolute;
+            top: 120px;
+            left: 30px;
+            z-index: 10;
+        }
+        .round-label { font-size: 10px; color: #888; }
+        .round-num { font-size: 24px; color: #00ffff; text-shadow: 0 0 15px #00ffff; }
+
+        .twist-badge {
+            position: absolute;
+            top: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 0, 255, 0.3);
+            border: 2px solid #ff00ff;
+            padding: 8px 20px;
+            font-size: 11px;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .twist-badge.show { opacity: 1; }
+
+        .score-display {
+            position: absolute;
+            top: 120px;
+            right: 320px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ffcc00;
+            padding: 10px 20px;
+            z-index: 10;
+        }
+        .score-label { font-size: 9px; color: #888; }
+        .score-val { font-size: 20px; color: #ffcc00; text-shadow: 0 0 10px #ffcc00; }
+
+        /* Pose prompt area */
+        .prompt-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 20;
+        }
+
+        .countdown-text {
+            font-size: 150px;
+            color: #ffcc00;
+            text-shadow: 0 0 50px #ffcc00, 0 0 100px #ff6600;
+            opacity: 0;
+        }
+        .countdown-text.show {
+            opacity: 1;
+            animation: countPop 0.5s ease-out;
+        }
+        @keyframes countPop {
+            0% { transform: scale(2.5); opacity: 0; }
+            30% { transform: scale(0.9); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        .pose-prompt {
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .pose-prompt.show { opacity: 1; }
+
+        .pose-silhouette {
+            width: 120px;
+            height: 140px;
+            margin: 0 auto 15px;
+        }
+        .pose-silhouette svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 20px #00ffff);
+        }
+
+        .pose-text {
+            font-size: 42px;
+            color: #00ffff;
+            text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff, 3px 3px 0 #000;
+            margin-bottom: 10px;
+        }
+        .pose-hint {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .pose-prompt.bait .pose-text {
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000, 0 0 60px #ff0000, 3px 3px 0 #000;
+            animation: baitShake 0.1s infinite;
+        }
+        .pose-prompt.bait .pose-silhouette svg {
+            filter: drop-shadow(0 0 20px #ff0000);
+        }
+        @keyframes baitShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        /* Timer bar */
+        .timer-container {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 450px;
+            z-index: 10;
+        }
+        .timer-bar-bg {
+            height: 14px;
+            background: #222;
+            border: 2px solid #444;
+        }
+        .timer-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ffcc00, #00ff00);
+            width: 100%;
+            transform-origin: left;
+            transition: transform 0.05s linear;
+        }
+        .timer-label {
+            font-size: 8px;
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .match-status {
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #888;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .match-status.show { opacity: 1; }
+        .match-status.holding { color: #ffcc00; }
+        .match-status.matched { color: #00ff00; text-shadow: 0 0 15px #00ff00; }
+
+        /* Result overlay */
         .result-overlay {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 48px;
             text-align: center;
+            z-index: 30;
             opacity: 0;
-            z-index: 70;
             pointer-events: none;
         }
         .result-overlay.show {
@@ -540,146 +675,165 @@
             animation: resultPop 1.5s ease-out forwards;
         }
         @keyframes resultPop {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-            40% { transform: translate(-50%, -50%) scale(1); }
+            0% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+            15% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
             80% { opacity: 1; }
-            100% { opacity: 0; transform: translate(-50%, -60%) scale(0.8); }
+            100% { opacity: 0; transform: translate(-50%, -60%) scale(0.9); }
+        }
+        .result-text {
+            font-size: 52px;
+            margin-bottom: 10px;
+        }
+        .result-text.success { color: #00ff00; text-shadow: 0 0 30px #00ff00; }
+        .result-text.fail { color: #ff0000; text-shadow: 0 0 30px #ff0000; }
+        .result-sub {
+            font-size: 12px;
+            color: #ffcc00;
         }
 
-        .result-overlay.wrong {
-            color: #ff0000;
-            text-shadow: 0 0 30px #ff0000;
-        }
-        .result-overlay.correct {
-            color: #00ff00;
-            text-shadow: 0 0 30px #00ff00;
-        }
-        .result-overlay.pathetic {
+        /* Commentary */
+        .commentary {
+            position: absolute;
+            bottom: 160px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
             color: #ff00ff;
-            text-shadow: 0 0 40px #ff00ff;
-            animation: patheticShake 1.5s ease-out forwards;
+            text-shadow: 0 0 10px #ff00ff;
+            z-index: 25;
+            opacity: 0;
+            text-align: center;
+            max-width: 500px;
         }
-        @keyframes patheticShake {
-            0% { transform: translate(-50%, -50%) scale(0.5) rotate(0deg); opacity: 0; }
-            10% { transform: translate(-50%, -50%) scale(1.2) rotate(-5deg); opacity: 1; }
-            20% { transform: translate(-50%, -50%) scale(1) rotate(5deg); }
-            30% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
-            40% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+        .commentary.show {
+            opacity: 1;
+            animation: commentFade 2s ease-out forwards;
+        }
+        @keyframes commentFade {
+            0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            15% { opacity: 1; transform: translateX(-50%) translateY(0); }
             80% { opacity: 1; }
             100% { opacity: 0; }
         }
 
-        /* Round Counter */
-        .round-display {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 12px;
-            color: #888;
-        }
-        .round-display .round-num {
-            color: #00ffff;
-            font-size: 20px;
-        }
-
-        /* Score/Shame Board */
-        .shame-board {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #ff00ff;
-            padding: 15px;
-            min-width: 150px;
-        }
-
-        .shame-title {
-            font-size: 8px;
-            color: #ff00ff;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .shame-line {
-            font-size: 8px;
-            color: #fff;
-            margin: 5px 0;
-            display: flex;
-            justify-content: space-between;
-        }
-        .shame-line .drinks {
-            color: #ffcc00;
-        }
-
-        /* ============ WIN SCREEN ============ */
-        #win-screen {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+        /* ============ RESULTS SCREEN ============ */
+        #results-screen {
             background: rgba(0, 0, 0, 0.95);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 300;
         }
-
-        .game-over-text {
-            font-size: 48px;
-            color: #ff0000;
-            text-shadow: 0 0 30px #ff0000;
-            margin-bottom: 10px;
-            animation: gameOverPulse 1s infinite;
-        }
-        @keyframes gameOverPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .loser-text {
-            font-size: 24px;
-            color: #ffcc00;
-            margin-bottom: 30px;
-        }
-
-        .final-stats {
-            background: rgba(0, 0, 0, 0.8);
+        .results-box {
+            background: rgba(0, 0, 0, 0.9);
             border: 3px solid #00ffff;
             padding: 30px 50px;
-            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+        }
+        .results-player {
+            font-size: 24px;
+            color: #ffcc00;
+            text-shadow: 0 0 20px #ffcc00;
+            margin-bottom: 10px;
+        }
+        .results-score {
+            font-size: 48px;
+            color: #00ffff;
+            text-shadow: 0 0 30px #00ffff;
+            margin-bottom: 15px;
+        }
+        .results-verdict {
+            font-size: 14px;
+            color: #ff00ff;
+            margin-bottom: 10px;
+        }
+        .results-drinks {
+            font-size: 18px;
+            color: #ffcc00;
+            text-shadow: 0 0 15px #ffcc00;
+            margin-bottom: 20px;
+        }
+        .results-commentary {
+            font-size: 10px;
+            color: #888;
+            max-width: 400px;
+            line-height: 1.8;
+            margin-bottom: 25px;
         }
 
-        .stat-line {
+        .nominate-section {
+            margin-top: 20px;
+        }
+        .nominate-title {
+            font-size: 12px;
+            color: #ff00ff;
+            margin-bottom: 15px;
+        }
+        .nominate-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .nominate-btn {
+            padding: 12px 20px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            background: #2d1b4e;
+            border: 2px solid #ff00ff;
+            color: #fff;
+            cursor: pointer;
+        }
+        .nominate-btn:hover {
+            background: #ff00ff;
+            color: #000;
+        }
+
+        /* ============ END SCREEN ============ */
+        #end-screen {
+            background: rgba(0, 0, 0, 0.95);
+        }
+        .end-title {
+            font-size: 36px;
+            color: #ff00ff;
+            text-shadow: 0 0 40px #ff00ff;
+            margin-bottom: 30px;
+        }
+        .leaderboard {
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #00ffff;
+            padding: 25px 40px;
+            margin-bottom: 20px;
+            min-width: 400px;
+        }
+        .leaderboard-row {
+            display: flex;
+            justify-content: space-between;
             font-size: 12px;
             color: #fff;
-            margin: 12px 0;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
         }
-        .stat-line .value {
-            color: #00ffff;
-        }
+        .leaderboard-row:last-child { border-bottom: none; }
+        .leaderboard-row .rank { color: #ffcc00; width: 30px; }
+        .leaderboard-row .name { flex: 1; }
+        .leaderboard-row .drinks { color: #ff6666; }
 
-        .roast-text {
-            font-size: 10px;
+        .end-roast {
+            font-size: 11px;
             color: #ff00ff;
-            max-width: 500px;
+            max-width: 450px;
             text-align: center;
             line-height: 1.8;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
         #play-again-btn {
             padding: 18px 50px;
-            font-size: 14px;
             font-family: 'Press Start 2P', monospace;
-            background: linear-gradient(180deg, #ff00ff, #aa0088);
-            color: #fff;
+            font-size: 14px;
+            background: linear-gradient(180deg, #00ffff, #0088aa);
+            color: #000;
             border: none;
             cursor: pointer;
-            box-shadow: 0 0 30px rgba(255, 0, 255, 0.5);
-        }
-        #play-again-btn:hover {
-            transform: scale(1.05);
         }
 
         /* Loading */
@@ -688,13 +842,12 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 14px;
+            font-size: 12px;
             color: #00ffff;
-            z-index: 400;
+            z-index: 500;
             background: #000;
             padding: 30px 50px;
-            border: 3px solid #00ffff;
-            text-shadow: 0 0 10px #00ffff;
+            border: 3px solid #ff00ff;
         }
 
         .hidden { display: none !important; }
@@ -702,362 +855,787 @@
 </head>
 <body>
     <div id="game-container">
-        <video id="webcam" autoplay playsinline></video>
-        <div class="scanlines"></div>
-        <div class="cabinet-frame"></div>
-
-        <!-- Setup Screen -->
-        <div id="setup-screen">
-            <div class="title">REACT</div>
-            <div class="subtitle">OR DRINK</div>
-            <div class="insert-coin">- INSERT DIGNITY TO CONTINUE -</div>
-
-            <div class="instructions-box">
-                <div class="instructions-title">// HOW TO NOT EMBARRASS YOURSELF //</div>
-                <p class="instruction-line">
-                    <span class="cmd">1.</span> A prompt appears. It tells you what to do with your hands.
-                </p>
-                <p class="instruction-line">
-                    <span class="cmd">2.</span> Do the thing. <span class="hl">LAST PERSON</span> to do it correctly <span class="warn">DRINKS</span>.
-                </p>
-                <p class="instruction-line">
-                    <span class="cmd">3.</span> <span class="warn">RED PROMPTS</span> are fake. Do nothing. Move and you drink.
-                </p>
-                <p class="instruction-line">
-                    <span class="cmd">4.</span> It gets faster. You will fail. We will laugh.
-                </p>
-            </div>
-
-            <div class="rules-box">
-                <div class="rules-title">🍺 DRINKING PROTOCOL 🍺</div>
-                <div class="rule-line">
-                    <span>Last to react</span>
-                    <span class="penalty">1 DRINK</span>
-                </div>
-                <div class="rule-line">
-                    <span>Moved on fake prompt</span>
-                    <span class="penalty">2 DRINKS</span>
-                </div>
-                <div class="rule-line">
-                    <span>Wrong gesture entirely</span>
-                    <span class="penalty">2 DRINKS + SHAME</span>
-                </div>
-                <div class="rule-line">
-                    <span>Last 3 rounds in a row</span>
-                    <span class="penalty">FINISH IT</span>
-                </div>
-                <div class="rule-line">
-                    <span>Eliminated (Sudden Death)</span>
-                    <span class="penalty">CHUG + SIT DOWN</span>
-                </div>
-            </div>
-
-            <div class="player-setup">
-                <span class="player-label">VICTIMS:</span>
-                <div class="player-count">
-                    <button onclick="adjustPlayers(-1)">-</button>
-                    <span class="count" id="player-count">4</span>
-                    <button onclick="adjustPlayers(1)">+</button>
-                </div>
-            </div>
-
-            <div class="mode-select">
-                <button class="mode-btn selected" data-mode="classic">
-                    <div class="mode-name">CLASSIC</div>
-                    <div class="mode-desc">10 ROUNDS<br>MOST DRINKS LOSES</div>
-                </button>
-                <button class="mode-btn" data-mode="sudden">
-                    <div class="mode-name">SUDDEN DEATH</div>
-                    <div class="mode-desc">WRONG = ELIMINATED<br>LAST ONE STANDING</div>
-                </button>
-                <button class="mode-btn chaos-btn" data-mode="chaos">
-                    <div class="mode-name">CHAOS</div>
-                    <div class="mode-desc">FAKES + SPEED<br>GOOD LUCK</div>
-                </button>
-            </div>
-
-            <button id="start-btn" onclick="startGame()">START GAME</button>
+        <!-- Stage Background -->
+        <div class="stage-bg">
+            <div class="spotlight spotlight-left"></div>
+            <div class="spotlight spotlight-right"></div>
+            <div class="spotlight spotlight-center"></div>
+            <div class="stage-floor"></div>
         </div>
 
-        <!-- Game Screen -->
-        <div id="game-screen">
-            <div class="round-display">
-                ROUND <span class="round-num" id="round-num">1</span>
+        <!-- Neon Header -->
+        <div class="neon-header">
+            <div class="neon-title">REACT OR DRINK</div>
+            <div class="neon-sub">THE PARTY GAME</div>
+        </div>
+
+        <!-- Webcam -->
+        <div id="video-container">
+            <video id="webcam" autoplay playsinline></video>
+        </div>
+        <div id="webcam-area" class="hidden">
+            <div id="webcam-preview">
+                <video id="preview-video" autoplay playsinline muted></video>
+            </div>
+            <div class="current-player-label" id="current-player-label">PLAYER</div>
+        </div>
+
+        <!-- ============ TITLE SCREEN ============ -->
+        <div id="title-screen" class="screen active">
+            <div class="title-content">
+                <div class="big-title">REACT OR DRINK</div>
+                <div class="big-subtitle">DO THE POSE OR FACE THE CONSEQUENCES</div>
+
+                <div class="title-columns">
+                    <div class="title-section rules-section">
+                        <div class="section-header">// HOW TO EMBARRASS YOURSELF //</div>
+                        <div class="rule-item" data-num="1">
+                            Enter everyone's names. <span class="hl">2-8 degenerates</span> can play.
+                            <br><span class="sass">the more the merrier (for us watching you fail)</span>
+                        </div>
+                        <div class="rule-item" data-num="2">
+                            The wheel picks who goes first. You don't get a choice.
+                            <br><span class="sass">fate is a cruel bitch</span>
+                        </div>
+                        <div class="rule-item" data-num="3">
+                            You get <span class="hl">5 rounds</span> in the hot seat. A pose appears.
+                            <br><span class="bad">DO IT FAST.</span> The camera is watching and judging.
+                        </div>
+                        <div class="rule-item" data-num="4">
+                            Hold the pose for half a second. If you can't do that,
+                            <br><span class="sass">maybe stick to beer pong, sweetie</span>
+                        </div>
+                        <div class="rule-item" data-num="5">
+                            <span class="good">Nail all 5?</span> Pick who goes next AND who drinks.
+                            <br><span class="bad">Fail miserably?</span> You drink. A lot. The wheel picks next.
+                        </div>
+                    </div>
+
+                    <div class="title-section drinks-section">
+                        <div class="section-header">// DRINKING DAMAGE CHART //</div>
+                        <div class="drink-table">
+                            <div class="drink-row">
+                                <span class="score">5/5</span>
+                                <span class="verdict">IMMUNE</span>
+                                <span class="penalty">nominate someone to drink. king shit.</span>
+                            </div>
+                            <div class="drink-row">
+                                <span class="score">4/5</span>
+                                <span class="verdict">SAFE</span>
+                                <span class="penalty">nothing. boring but alive.</span>
+                            </div>
+                            <div class="drink-row">
+                                <span class="score">3/5</span>
+                                <span class="verdict">SAFE</span>
+                                <span class="penalty">you survived. barely.</span>
+                            </div>
+                            <div class="drink-row">
+                                <span class="score">2/5</span>
+                                <span class="verdict">ROUGH</span>
+                                <span class="penalty">take 1 drink. you earned it.</span>
+                            </div>
+                            <div class="drink-row">
+                                <span class="score">1/5</span>
+                                <span class="verdict">YIKES</span>
+                                <span class="penalty">take 2 drinks. your ancestors weep.</span>
+                            </div>
+                            <div class="drink-row">
+                                <span class="score">0/5</span>
+                                <span class="verdict">PATHETIC</span>
+                                <span class="penalty">3 drinks + wheel of shame picks next. clown behavior.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="twists-section">
+                    <div class="section-header">// ROUND 3+ GETS SPICY //</div>
+                    <div class="twist-grid">
+                        <div class="twist-item">
+                            <div class="twist-name">BAIT & SWITCH</div>
+                            <div class="twist-desc">pose changes mid-round. keep up or shut up.</div>
+                        </div>
+                        <div class="twist-item">
+                            <div class="twist-name">COPYCAT</div>
+                            <div class="twist-desc">do the last pose again. hope you were paying attention.</div>
+                        </div>
+                        <div class="twist-item">
+                            <div class="twist-name">OPPOSITE DAY</div>
+                            <div class="twist-desc">do literally any OTHER pose. brain vs body.</div>
+                        </div>
+                        <div class="twist-item">
+                            <div class="twist-name">SPEED ROUND</div>
+                            <div class="twist-desc">3 poses in 3 seconds. panic is appropriate.</div>
+                        </div>
+                        <div class="twist-item">
+                            <div class="twist-name">FREEZE FRAME</div>
+                            <div class="twist-desc">dance around, then FREEZE. one twitch and you're done.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pose-section">
+                    <div class="pose-section-title">// THE POSES (LEARN THEM OR SUFFER) //</div>
+                    <div class="pose-guide" id="pose-guide"></div>
+                </div>
+
+                <button id="start-game-btn-title">I'M READY TO LOOK STUPID</button>
+            </div>
+        </div>
+
+        <!-- ============ SETUP SCREEN ============ -->
+        <div id="setup-screen" class="screen">
+            <div class="setup-box">
+                <div class="setup-title">WHO'S PLAYING?</div>
+                <div class="player-input-row">
+                    <input type="text" id="player-name-input" placeholder="Enter name..." maxlength="10">
+                    <button id="add-player-btn">+</button>
+                </div>
+                <div class="player-count-info" id="player-count-info">2-8 victims required</div>
+                <div class="player-list" id="player-list"></div>
+                <button id="start-game-btn" disabled>SPIN THE WHEEL</button>
+            </div>
+        </div>
+
+        <!-- ============ WHEEL SCREEN ============ -->
+        <div id="wheel-screen" class="screen">
+            <div class="wheel-title" id="wheel-title">WHO'S FIRST?</div>
+            <div class="wheel-wrapper">
+                <div class="wheel-container">
+                    <div class="wheel-inner" id="wheel-inner">
+                        <canvas id="wheel-canvas" class="wheel-canvas" width="334" height="334"></canvas>
+                    </div>
+                </div>
+                <div class="wheel-pointer"></div>
+                <div class="wheel-center-hub"></div>
+            </div>
+            <div class="wheel-result" id="wheel-result"></div>
+        </div>
+
+        <!-- ============ GAME SCREEN ============ -->
+        <div id="game-screen" class="screen">
+            <div class="round-info">
+                <div class="round-label">ROUND</div>
+                <div class="round-num" id="round-num">1</div>
             </div>
 
-            <div class="shame-board">
-                <div class="shame-title">SHAME BOARD</div>
-                <div id="shame-list"></div>
-            </div>
+            <div class="twist-badge" id="twist-badge"></div>
 
-            <div class="player-grid" id="player-grid"></div>
+            <div class="score-display">
+                <div class="score-label">SCORE</div>
+                <div class="score-val" id="score-val">0/5</div>
+            </div>
 
             <div class="prompt-area">
-                <div class="countdown" id="countdown"></div>
-                <div class="prompt-text" id="prompt-text"></div>
-                <div class="prompt-subtitle" id="prompt-subtitle"></div>
-                <div class="hand-icons" id="hand-icons">
-                    <div class="hand-icon" id="icon-left">👈</div>
-                    <div class="hand-icon" id="icon-right">👉</div>
+                <div class="countdown-text" id="countdown"></div>
+                <div class="pose-prompt" id="pose-prompt">
+                    <div class="pose-silhouette" id="pose-silhouette"></div>
+                    <div class="pose-text" id="pose-text">T-POSE</div>
+                    <div class="pose-hint" id="pose-hint">arms out to the sides</div>
                 </div>
             </div>
 
-            <div class="result-overlay" id="result-overlay"></div>
-
-            <div class="timer-bar-container">
-                <div class="timer-bar" id="timer-bar"></div>
+            <div class="result-overlay" id="result-overlay">
+                <div class="result-text" id="result-text">NICE</div>
+                <div class="result-sub" id="result-sub"></div>
             </div>
 
-            <!-- Webcam Area -->
-            <div id="webcam-area">
-                <div id="webcam-preview">
-                    <video id="preview-video" autoplay playsinline muted></video>
-                    <div class="hand-indicator" id="hand-left">
-                        <span class="hand-label">LEFT</span>
-                    </div>
-                    <div class="hand-indicator" id="hand-right">
-                        <span class="hand-label">RIGHT</span>
-                    </div>
+            <div class="commentary" id="commentary"></div>
+
+            <div class="match-status" id="match-status">HOLD IT...</div>
+
+            <div class="timer-container">
+                <div class="timer-bar-bg">
+                    <div class="timer-bar" id="timer-bar"></div>
+                </div>
+                <div class="timer-label">REACT!</div>
+            </div>
+        </div>
+
+        <!-- ============ RESULTS SCREEN ============ -->
+        <div id="results-screen" class="screen">
+            <div class="results-box">
+                <div class="results-player" id="results-player">PLAYER</div>
+                <div class="results-score" id="results-score">3/5</div>
+                <div class="results-verdict" id="results-verdict">SAFE</div>
+                <div class="results-drinks" id="results-drinks"></div>
+                <div class="results-commentary" id="results-commentary"></div>
+
+                <div class="nominate-section" id="nominate-section">
+                    <div class="nominate-title" id="nominate-title">CHOOSE YOUR VICTIM</div>
+                    <div class="nominate-buttons" id="nominate-buttons"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Win Screen -->
-        <div id="win-screen">
-            <div class="game-over-text">GAME OVER</div>
-            <div class="loser-text" id="loser-text">PLAYER 3 IS THE BIGGEST DISAPPOINTMENT</div>
-            <div class="final-stats">
-                <p class="stat-line">ROUNDS PLAYED: <span class="value" id="stat-rounds">0</span></p>
-                <p class="stat-line">TOTAL DRINKS DISTRIBUTED: <span class="value" id="stat-drinks">0</span></p>
-                <p class="stat-line">FASTEST REACTION: <span class="value" id="stat-fastest">0ms</span></p>
-                <p class="stat-line">MOST SHAMED: <span class="value" id="stat-shamed">PLAYER 1</span></p>
-            </div>
-            <p class="roast-text" id="roast-text"></p>
-            <button id="play-again-btn" onclick="resetGame()">INSERT COIN</button>
+        <!-- ============ END SCREEN ============ -->
+        <div id="end-screen" class="screen">
+            <div class="end-title">GAME OVER</div>
+            <div class="leaderboard" id="leaderboard"></div>
+            <div class="end-roast" id="end-roast"></div>
+            <button id="play-again-btn">RUN IT BACK</button>
         </div>
 
-        <div id="loading">CALIBRATING SHAME SENSORS...</div>
+        <div id="loading">LOADING POSE DETECTION...</div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <!-- MediaPipe Pose -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
 
     <script>
-        // ============ CONFIGURATION ============
-        const PROMPTS = {
-            LEFT: { text: 'LEFT!', icon: 'left', check: (h) => h.left && !h.right },
-            RIGHT: { text: 'RIGHT!', icon: 'right', check: (h) => h.right && !h.left },
-            BOTH: { text: 'BOTH!', icon: 'both', check: (h) => h.left && h.right },
-            NONE: { text: 'DOWN!', icon: 'none', check: (h) => !h.left && !h.right }
+        // ============ POSE SILHOUETTES (SVG) ============
+        const POSE_SVGS = {
+            stickemup: `<svg viewBox="0 0 60 80">
+                <circle cx="30" cy="12" r="10" fill="#00ffff"/>
+                <line x1="30" y1="22" x2="30" y2="50" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="30" x2="10" y2="15" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="30" x2="50" y2="15" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="50" x2="15" y2="75" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="50" x2="45" y2="75" stroke="#00ffff" stroke-width="4"/>
+            </svg>`,
+            tpose: `<svg viewBox="0 0 80 70">
+                <circle cx="40" cy="10" r="8" fill="#00ffff"/>
+                <line x1="40" y1="18" x2="40" y2="45" stroke="#00ffff" stroke-width="4"/>
+                <line x1="5" y1="28" x2="75" y2="28" stroke="#00ffff" stroke-width="4"/>
+                <line x1="40" y1="45" x2="25" y2="68" stroke="#00ffff" stroke-width="4"/>
+                <line x1="40" y1="45" x2="55" y2="68" stroke="#00ffff" stroke-width="4"/>
+            </svg>`,
+            flex: `<svg viewBox="0 0 70 70">
+                <circle cx="35" cy="10" r="8" fill="#00ffff"/>
+                <line x1="35" y1="18" x2="35" y2="45" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="25" x2="15" y2="30" stroke="#00ffff" stroke-width="4"/>
+                <line x1="15" y1="30" x2="20" y2="12" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="25" x2="55" y2="30" stroke="#00ffff" stroke-width="4"/>
+                <line x1="55" y1="30" x2="50" y2="12" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="45" x2="22" y2="68" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="45" x2="48" y2="68" stroke="#00ffff" stroke-width="4"/>
+            </svg>`,
+            dab: `<svg viewBox="0 0 80 70">
+                <circle cx="35" cy="10" r="8" fill="#00ffff"/>
+                <line x1="35" y1="18" x2="35" y2="45" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="25" x2="55" y2="10" stroke="#00ffff" stroke-width="4"/>
+                <line x1="55" y1="10" x2="75" y2="5" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="25" x2="25" y2="18" stroke="#00ffff" stroke-width="4"/>
+                <line x1="25" y1="18" x2="30" y2="8" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="45" x2="22" y2="68" stroke="#00ffff" stroke-width="4"/>
+                <line x1="35" y1="45" x2="48" y2="68" stroke="#00ffff" stroke-width="4"/>
+            </svg>`,
+            shrug: `<svg viewBox="0 0 80 70">
+                <circle cx="40" cy="10" r="8" fill="#00ffff"/>
+                <line x1="40" y1="18" x2="40" y2="45" stroke="#00ffff" stroke-width="4"/>
+                <line x1="40" y1="25" x2="20" y2="20" stroke="#00ffff" stroke-width="4"/>
+                <line x1="20" y1="20" x2="10" y2="30" stroke="#00ffff" stroke-width="4"/>
+                <line x1="40" y1="25" x2="60" y2="20" stroke="#00ffff" stroke-width="4"/>
+                <line x1="60" y1="20" x2="70" y2="30" stroke="#00ffff" stroke-width="4"/>
+                <line x1="40" y1="45" x2="27" y2="68" stroke="#00ffff" stroke-width="4"/>
+                <line x1="40" y1="45" x2="53" y2="68" stroke="#00ffff" stroke-width="4"/>
+            </svg>`,
+            powerstance: `<svg viewBox="0 0 60 75">
+                <circle cx="30" cy="10" r="8" fill="#00ffff"/>
+                <line x1="30" y1="18" x2="30" y2="45" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="28" x2="15" y2="35" stroke="#00ffff" stroke-width="4"/>
+                <line x1="15" y1="35" x2="18" y2="48" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="28" x2="45" y2="35" stroke="#00ffff" stroke-width="4"/>
+                <line x1="45" y1="35" x2="42" y2="48" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="45" x2="18" y2="72" stroke="#00ffff" stroke-width="4"/>
+                <line x1="30" y1="45" x2="42" y2="72" stroke="#00ffff" stroke-width="4"/>
+            </svg>`,
+            chillin: `<svg viewBox="0 0 50 75">
+                <circle cx="25" cy="10" r="8" fill="#00ffff"/>
+                <line x1="25" y1="18" x2="25" y2="48" stroke="#00ffff" stroke-width="4"/>
+                <line x1="25" y1="28" x2="12" y2="50" stroke="#00ffff" stroke-width="4"/>
+                <line x1="25" y1="28" x2="38" y2="50" stroke="#00ffff" stroke-width="4"/>
+                <line x1="25" y1="48" x2="15" y2="72" stroke="#00ffff" stroke-width="4"/>
+                <line x1="25" y1="48" x2="35" y2="72" stroke="#00ffff" stroke-width="4"/>
+            </svg>`
         };
 
-        const ROASTS = {
-            slow: [
-                "Your reflexes called. They're filing for divorce.",
-                "Glaciers move faster than you.",
-                "Did you fall asleep or is this your best?",
-                "The 'react' part was not optional.",
-                "You move like you're buffering on dial-up."
+        // ============ POSES ============
+        const POSES = {
+            stickemup: {
+                name: "STICK 'EM UP",
+                hint: 'hands up like you mean it',
+                svg: POSE_SVGS.stickemup,
+                check: (lm) => {
+                    const leftWrist = lm[15], rightWrist = lm[16];
+                    const leftShoulder = lm[11], rightShoulder = lm[12];
+                    return leftWrist.y < leftShoulder.y - 0.1 && rightWrist.y < rightShoulder.y - 0.1;
+                }
+            },
+            tpose: {
+                name: 'ASSERT DOMINANCE',
+                hint: 'full T-pose, arms wide',
+                svg: POSE_SVGS.tpose,
+                check: (lm) => {
+                    const leftWrist = lm[15], rightWrist = lm[16];
+                    const leftShoulder = lm[11], rightShoulder = lm[12];
+                    const armsWide = Math.abs(leftWrist.x - rightWrist.x) > 0.5;
+                    const leftLevel = Math.abs(leftWrist.y - leftShoulder.y) < 0.15;
+                    const rightLevel = Math.abs(rightWrist.y - rightShoulder.y) < 0.15;
+                    return armsWide && leftLevel && rightLevel;
+                }
+            },
+            flex: {
+                name: 'GUN SHOW',
+                hint: 'flex both arms, make it weird',
+                svg: POSE_SVGS.flex,
+                check: (lm) => {
+                    const leftWrist = lm[15], rightWrist = lm[16];
+                    const leftElbow = lm[13], rightElbow = lm[14];
+                    const leftShoulder = lm[11], rightShoulder = lm[12];
+                    const leftBent = leftElbow.y < leftShoulder.y && leftWrist.y < leftElbow.y;
+                    const rightBent = rightElbow.y < rightShoulder.y && rightWrist.y < rightElbow.y;
+                    const elbowsOut = Math.abs(leftElbow.x - rightElbow.x) > 0.25;
+                    return leftBent && rightBent && elbowsOut;
+                }
+            },
+            dab: {
+                name: 'DAB ON EM',
+                hint: 'one arm out, face in elbow',
+                svg: POSE_SVGS.dab,
+                check: (lm) => {
+                    const leftWrist = lm[15], rightWrist = lm[16];
+                    const leftElbow = lm[13], rightElbow = lm[14];
+                    const nose = lm[0];
+                    const leftUp = leftWrist.y < leftElbow.y - 0.1;
+                    const rightUp = rightWrist.y < rightElbow.y - 0.1;
+                    const leftAcross = Math.abs(leftWrist.x - nose.x) < 0.15;
+                    const rightAcross = Math.abs(rightWrist.x - nose.x) < 0.15;
+                    return (leftUp && rightAcross) || (rightUp && leftAcross);
+                }
+            },
+            shrug: {
+                name: 'NOT MY PROBLEM',
+                hint: 'shrug, hands out, palms up energy',
+                svg: POSE_SVGS.shrug,
+                check: (lm) => {
+                    const leftWrist = lm[15], rightWrist = lm[16];
+                    const leftShoulder = lm[11], rightShoulder = lm[12];
+                    const leftElbow = lm[13], rightElbow = lm[14];
+                    const handsOut = Math.abs(leftWrist.x - rightWrist.x) > 0.3;
+                    const leftMid = leftWrist.y > leftShoulder.y && leftWrist.y < leftShoulder.y + 0.25;
+                    const rightMid = rightWrist.y > rightShoulder.y && rightWrist.y < rightShoulder.y + 0.25;
+                    const elbowsBent = leftElbow.y > leftShoulder.y && rightElbow.y > rightShoulder.y;
+                    return handsOut && leftMid && rightMid && elbowsBent;
+                }
+            },
+            powerstance: {
+                name: 'POWER STANCE',
+                hint: 'hands on hips, own it',
+                svg: POSE_SVGS.powerstance,
+                check: (lm) => {
+                    const leftWrist = lm[15], rightWrist = lm[16];
+                    const leftHip = lm[23], rightHip = lm[24];
+                    const leftNearHip = Math.abs(leftWrist.y - leftHip.y) < 0.12 && Math.abs(leftWrist.x - leftHip.x) < 0.15;
+                    const rightNearHip = Math.abs(rightWrist.y - rightHip.y) < 0.12 && Math.abs(rightWrist.x - rightHip.x) < 0.15;
+                    return leftNearHip && rightNearHip;
+                }
+            },
+            chillin: {
+                name: 'PLAY IT COOL',
+                hint: 'arms down, chill vibes only',
+                svg: POSE_SVGS.chillin,
+                check: (lm) => {
+                    const leftWrist = lm[15], rightWrist = lm[16];
+                    const leftHip = lm[23], rightHip = lm[24];
+                    return leftWrist.y > leftHip.y && rightWrist.y > rightHip.y;
+                }
+            }
+        };
+        const POSE_KEYS = Object.keys(POSES);
+
+        // Build pose guide on title screen
+        function buildPoseGuide() {
+            const guide = document.getElementById('pose-guide');
+            guide.innerHTML = POSE_KEYS.map(key => {
+                const pose = POSES[key];
+                return `<div class="pose-card">
+                    <div class="pose-icon">${pose.svg}</div>
+                    <div class="pose-name">${pose.name}</div>
+                </div>`;
+            }).join('');
+        }
+        buildPoseGuide();
+
+        // ============ COMMENTARY LIBRARY ============
+        const COMMENTARY = {
+            success: [
+                "acceptable.",
+                "the bar was low. you cleared it.",
+                "technically correct. the best kind of correct.",
+                "that'll do.",
+                "surprisingly competent.",
+                "your ancestors can rest now.",
+                "not terrible. high praise.",
+                "the judges nod approvingly.",
+                "someone somewhere is mildly impressed.",
+                "you've done the bare minimum. congratulations.",
+                "adequate. just adequate.",
+                "well shit, it actually worked."
             ],
-            wrong: [
-                "Left. Right. It's not that hard. Apparently it is.",
-                "Did you learn left and right from a different planet?",
-                "Wrong. Just... impressively wrong.",
-                "Your brain and hands are not on speaking terms.",
-                "That was confidently incorrect."
+            fail: [
+                "rough.",
+                "that was... a choice.",
+                "bold strategy. didn't pan out.",
+                "your body said no.",
+                "the audacity.",
+                "we'll pretend that didn't happen.",
+                "interesting interpretation.",
+                "the judges are concerned.",
+                "your confidence was inspiring. misplaced, but inspiring.",
+                "were you even trying?",
+                "that's one way to do it. the wrong way.",
+                "your limbs have betrayed you.",
+                "task failed successfully. wait, no. just failed."
             ],
-            fake: [
-                "IT WAS RED. RED MEANS DON'T.",
-                "You fell for the oldest trick. Pathetic.",
-                "Fake prompt. Real disappointment.",
-                "Did the red color confuse you?",
-                "It literally said DON'T MOVE."
+            perfect: [
+                "showoff.",
+                "ok we get it.",
+                "save some talent for the rest of us.",
+                "annoyingly good.",
+                "way to make everyone else look bad.",
+                "performance of the century. allegedly.",
+                "main character energy. gross.",
+                "congrats on being that person."
             ],
-            winner: [
-                "You won by default. Everyone else was worse.",
-                "Congratulations on being the least terrible.",
-                "Winner winner. Still a sinner.",
-                "You survived. Barely.",
-                "The bar was low and you cleared it. Barely."
+            pathetic: [
+                "genuinely impressive how bad that was.",
+                "that's going in the group chat.",
+                "your ancestors felt that one.",
+                "historic failure. they'll write songs.",
+                "legendary. for all the wrong reasons.",
+                "you've peaked. this is it.",
+                "somewhere, a PE teacher is crying.",
+                "did you have a stroke or was that intentional?",
+                "actual footage of a disaster.",
+                "the camera saw that. we all saw that."
             ],
-            loser: [
-                "You are the designated disappointment.",
-                "Your ancestors are watching. They're not proud.",
-                "You had one job. Several times. Failed all of them.",
-                "Somewhere, a participation trophy is crying for you.",
-                "You lost to people who were also drinking. Think about that."
+            twist_bait: [
+                "oh you thought it was that easy?",
+                "plot twist, bitch.",
+                "surprise motherfucker.",
+                "keep up.",
+                "sike.",
+                "gotcha."
+            ],
+            twist_copycat: [
+                "hope you were paying attention.",
+                "memory test. you're failing.",
+                "what was it again? tick tock.",
+                "remember? no? tragic."
+            ],
+            twist_opposite: [
+                "brain vs body. fight.",
+                "do the opposite. if you can.",
+                "reverse psychology. you're welcome.",
+                "your brain is screaming."
+            ],
+            twist_speed: [
+                "no time to think. just vibes.",
+                "speed round. survive.",
+                "fast hands only. yours aren't.",
+                "go go go go go"
+            ],
+            twist_freeze: [
+                "DON'T. MOVE.",
+                "statue mode activated.",
+                "freeze or fail. simple.",
+                "one twitch and you're done."
+            ],
+            nomination: [
+                "choose your victim.",
+                "who suffers next?",
+                "point the finger.",
+                "pick wisely. or don't.",
+                "someone's about to have a bad time.",
+                "time to ruin a friendship.",
+                "pick someone you hate."
+            ],
+            wheel_shame: [
+                "the wheel has spoken.",
+                "fate has decided.",
+                "the universe chose violence.",
+                "you lost nomination privileges. pathetic."
             ]
         };
 
-        const CONFIGS = {
-            classic: {
-                rounds: 10,
-                baseTime: 3000,
-                timeDecrease: 150,
-                minTime: 1200,
-                fakeChance: 0,
-                speedRounds: false
-            },
-            sudden: {
-                rounds: 999,
-                baseTime: 2500,
-                timeDecrease: 100,
-                minTime: 1000,
-                fakeChance: 0.15,
-                speedRounds: false
-            },
-            chaos: {
-                rounds: 15,
-                baseTime: 2500,
-                timeDecrease: 200,
-                minTime: 800,
-                fakeChance: 0.25,
-                speedRounds: true
-            }
+        const VERDICTS = {
+            5: { text: 'IMMUNE', drinks: 0, drinkText: 'nominate someone to drink', canNominate: true },
+            4: { text: 'SAFE', drinks: 0, drinkText: '', canNominate: false },
+            3: { text: 'SAFE', drinks: 0, drinkText: '', canNominate: false },
+            2: { text: 'ROUGH', drinks: 1, drinkText: 'take 1 drink', canNominate: false },
+            1: { text: 'YIKES', drinks: 2, drinkText: 'take 2 drinks', canNominate: false },
+            0: { text: 'PATHETIC', drinks: 3, drinkText: 'take 3 drinks', canNominate: false, wheelShame: true }
         };
 
-        // ============ GAME STATE ============
+        const END_ROASTS = {
+            good: [
+                "somebody actually tried. suspicious.",
+                "decent showing. the bar remains underground.",
+                "you survived. barely counts as winning but here we are."
+            ],
+            mid: [
+                "aggressively average. as expected.",
+                "mediocre. just like your dating life.",
+                "nobody embarrassed themselves too badly. disappointing honestly."
+            ],
+            bad: [
+                "that was painful to watch. and we watched the whole thing.",
+                "collective failure. truly a team effort in sucking.",
+                "the poses won. humanity lost. again."
+            ]
+        };
+
+        // ============ STATE ============
         const state = {
-            mode: 'classic',
-            config: CONFIGS.classic,
-            playerCount: 4,
             players: [],
-            round: 0,
-            phase: 'waiting', // waiting, countdown, prompt, judging, result
-            currentPrompt: null,
-            isFake: false,
-            reactionTime: 0,
-            reactionStart: 0,
+            playedPlayers: [],
+            currentPlayer: null,
+            currentRound: 0,
+            roundScore: 0,
+            phase: 'title',
+            landmarks: null,
+            holdStart: 0,
+            currentPose: null,
+            currentTwist: null,
+            lastPose: null,
             timerInterval: null,
-            running: false,
-            hands: {
-                left: { up: false, x: 0, y: 0 },
-                right: { up: false, x: 0, y: 0 }
-            },
-            playerStates: [], // tracks who did what this round
-            fastestReaction: 9999,
-            totalDrinks: 0
+            playerDrinks: {}
         };
 
+        const config = {
+            roundsPerPlayer: 5,
+            holdTime: 500,
+            baseReactionTime: 3500,
+            minReactionTime: 2000
+        };
+
+        // ============ DOM ELEMENTS ============
         const video = document.getElementById('webcam');
         const previewVideo = document.getElementById('preview-video');
 
-        // ============ PLAYER SETUP ============
-        function adjustPlayers(delta) {
-            state.playerCount = Math.max(2, Math.min(8, state.playerCount + delta));
-            document.getElementById('player-count').textContent = state.playerCount;
+        // ============ UTILITY ============
+        function randomFrom(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
         }
 
-        function createPlayers() {
-            state.players = [];
-            for (let i = 0; i < state.playerCount; i++) {
-                state.players.push({
-                    id: i,
-                    name: `P${i + 1}`,
-                    drinks: 0,
-                    eliminated: false,
-                    consecutiveLosses: 0,
-                    reacted: false,
-                    correct: false,
-                    reactionTime: 0
-                });
-            }
-            renderPlayerGrid();
-            renderShameBoard();
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            // Hide neon header on title screen (it has its own title)
+            document.querySelector('.neon-header').style.display = screenId === 'title-screen' ? 'none' : 'block';
         }
 
-        function renderPlayerGrid() {
-            const grid = document.getElementById('player-grid');
-            grid.innerHTML = state.players.map(p => `
-                <div class="player-slot ${p.eliminated ? 'eliminated' : ''}" id="slot-${p.id}">
-                    <div class="player-name">${p.name}</div>
-                    <div class="player-drinks">🍺 ${p.drinks}</div>
-                    <div class="player-status" id="status-${p.id}">READY</div>
-                </div>
-            `).join('');
-        }
-
-        function renderShameBoard() {
-            const sorted = [...state.players].sort((a, b) => b.drinks - a.drinks);
-            document.getElementById('shame-list').innerHTML = sorted.slice(0, 4).map(p => `
-                <div class="shame-line">
-                    <span>${p.name}</span>
-                    <span class="drinks">${p.drinks}</span>
-                </div>
-            `).join('');
-        }
-
-        // ============ MODE SELECTION ============
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                state.mode = btn.dataset.mode;
-                state.config = CONFIGS[state.mode];
-            });
+        // ============ TITLE SCREEN ============
+        document.getElementById('start-game-btn-title').addEventListener('click', () => {
+            showScreen('setup-screen');
         });
 
-        // ============ GAME FLOW ============
-        function startGame() {
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('game-screen').style.display = 'block';
+        // ============ PLAYER SETUP ============
+        const playerInput = document.getElementById('player-name-input');
+        const addBtn = document.getElementById('add-player-btn');
+        const startBtn = document.getElementById('start-game-btn');
+        const playerList = document.getElementById('player-list');
+        const countInfo = document.getElementById('player-count-info');
 
-            state.running = true;
-            state.round = 0;
-            state.fastestReaction = 9999;
-            state.totalDrinks = 0;
+        function updatePlayerList() {
+            playerList.innerHTML = state.players.map((name, i) =>
+                `<span class="player-tag">${name}<span class="remove-btn" onclick="removePlayer(${i})">×</span></span>`
+            ).join('');
 
-            createPlayers();
+            const count = state.players.length;
+            countInfo.textContent = count < 2 ? `${count}/2 victims required` : `${count} victims ready`;
+            startBtn.disabled = count < 2;
+        }
+
+        function addPlayer() {
+            const name = playerInput.value.trim().toUpperCase().slice(0, 10);
+            if (name && state.players.length < 8 && !state.players.includes(name)) {
+                state.players.push(name);
+                state.playerDrinks[name] = 0;
+                playerInput.value = '';
+                updatePlayerList();
+            }
+            playerInput.focus();
+        }
+
+        window.removePlayer = function(index) {
+            const name = state.players[index];
+            delete state.playerDrinks[name];
+            state.players.splice(index, 1);
+            updatePlayerList();
+        };
+
+        addBtn.addEventListener('click', addPlayer);
+        playerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addPlayer();
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (state.players.length >= 2) {
+                state.playedPlayers = [];
+                document.getElementById('webcam-area').classList.remove('hidden');
+                showWheelScreen('WHO\'S FIRST?');
+            }
+        });
+
+        // ============ WHEEL ============
+        const WHEEL_COLORS = [
+            '#ff00ff', '#00ffff', '#ffcc00', '#ff6666',
+            '#66ff66', '#ff66ff', '#66ffff', '#ffff66'
+        ];
+
+        function showWheelScreen(title) {
+            showScreen('wheel-screen');
+            document.getElementById('wheel-title').textContent = title;
+            document.getElementById('wheel-result').textContent = '';
+
+            const availablePlayers = state.players.filter(p => !state.playedPlayers.includes(p));
+            buildWheel(availablePlayers);
+
+            setTimeout(() => spinWheel(availablePlayers), 800);
+        }
+
+        function buildWheel(players) {
+            const canvas = document.getElementById('wheel-canvas');
+            const ctx = canvas.getContext('2d');
+            const wheelInner = document.getElementById('wheel-inner');
+
+            wheelInner.style.transition = 'none';
+            wheelInner.style.transform = 'rotate(0deg)';
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 5;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const segmentAngle = (2 * Math.PI) / players.length;
+
+            players.forEach((name, i) => {
+                const startAngle = i * segmentAngle - Math.PI / 2;
+                const endAngle = startAngle + segmentAngle;
+
+                // Draw segment
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+                ctx.fill();
+
+                // Draw border
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw name
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + segmentAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 14px "Press Start 2P"';
+                ctx.shadowColor = '#fff';
+                ctx.shadowBlur = 3;
+                ctx.fillText(name, radius - 15, 5);
+                ctx.restore();
+            });
+        }
+
+        function spinWheel(players) {
+            const wheelInner = document.getElementById('wheel-inner');
+            const segmentAngle = 360 / players.length;
+
+            const winnerIndex = Math.floor(Math.random() * players.length);
+            const winner = players[winnerIndex];
+
+            // Calculate spin - pointer is at top
+            const spins = 5 + Math.random() * 3;
+            const targetAngle = 360 * spins - (segmentAngle * winnerIndex + segmentAngle / 2);
+
+            wheelInner.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+            wheelInner.style.transform = `rotate(${targetAngle}deg)`;
+
+            setTimeout(() => {
+                document.getElementById('wheel-result').textContent = `${winner}, YOU'RE UP`;
+
+                setTimeout(() => {
+                    state.currentPlayer = winner;
+                    startHotSeat();
+                }, 1500);
+            }, 4200);
+        }
+
+        // ============ HOT SEAT GAME ============
+        function startHotSeat() {
+            state.currentRound = 0;
+            state.roundScore = 0;
+            state.lastPose = null;
+
+            showScreen('game-screen');
+            document.getElementById('current-player-label').textContent = state.currentPlayer;
+            document.getElementById('score-val').textContent = '0/5';
+
             startRound();
         }
 
+        function getTwistForRound(round) {
+            if (round <= 2) return null;
+
+            const chances = { 3: 0.4, 4: 0.6, 5: 0.8 };
+            if (Math.random() > chances[round]) return null;
+
+            const easyTwists = ['copycat', 'speed'];
+            const hardTwists = ['bait', 'opposite', 'freeze'];
+
+            if (round === 3) return randomFrom(easyTwists);
+            if (round === 4) return randomFrom([...easyTwists, ...hardTwists]);
+            return randomFrom(hardTwists);
+        }
+
         function startRound() {
-            state.round++;
-            document.getElementById('round-num').textContent = state.round;
+            state.currentRound++;
 
-            // Check end conditions
-            if (state.mode === 'classic' && state.round > state.config.rounds) {
-                endGame();
+            if (state.currentRound > config.roundsPerPlayer) {
+                showResults();
                 return;
             }
 
-            const alivePlayers = state.players.filter(p => !p.eliminated);
-            if (state.mode === 'sudden' && alivePlayers.length <= 1) {
-                endGame();
-                return;
+            document.getElementById('round-num').textContent = state.currentRound;
+            document.getElementById('pose-prompt').classList.remove('show', 'bait');
+            document.getElementById('twist-badge').classList.remove('show');
+            document.getElementById('match-status').classList.remove('show', 'holding', 'matched');
+            document.getElementById('commentary').classList.remove('show');
+
+            state.currentTwist = getTwistForRound(state.currentRound);
+
+            if (state.currentTwist) {
+                const badge = document.getElementById('twist-badge');
+                const twistNames = {
+                    bait: 'BAIT & SWITCH',
+                    copycat: 'COPYCAT',
+                    opposite: 'OPPOSITE DAY',
+                    speed: 'SPEED ROUND',
+                    freeze: 'FREEZE FRAME'
+                };
+                badge.textContent = twistNames[state.currentTwist];
+                badge.classList.add('show');
             }
 
-            // Reset player states for this round
-            state.players.forEach(p => {
-                p.reacted = false;
-                p.correct = false;
-                p.reactionTime = 0;
-                if (!p.eliminated) {
-                    document.getElementById(`status-${p.id}`).textContent = 'READY';
-                    document.getElementById(`slot-${p.id}`).className = 'player-slot';
-                }
-            });
-
-            // Start countdown
             state.phase = 'countdown';
             showCountdown();
         }
 
         function showCountdown() {
             const countEl = document.getElementById('countdown');
-            const promptEl = document.getElementById('prompt-text');
-            const subtitleEl = document.getElementById('prompt-subtitle');
-            const iconsEl = document.getElementById('hand-icons');
-
-            promptEl.classList.remove('show');
-            subtitleEl.classList.remove('show');
-            iconsEl.classList.remove('show');
-
             let count = 3;
+
             countEl.textContent = count;
             countEl.classList.add('show');
 
-            const countInterval = setInterval(() => {
+            const interval = setInterval(() => {
                 count--;
                 if (count > 0) {
                     countEl.textContent = count;
@@ -1065,321 +1643,414 @@
                     void countEl.offsetWidth;
                     countEl.classList.add('show');
                 } else {
-                    clearInterval(countInterval);
+                    clearInterval(interval);
                     countEl.classList.remove('show');
-                    showPrompt();
+
+                    if (state.currentTwist === 'speed') {
+                        startSpeedRound();
+                    } else if (state.currentTwist === 'freeze') {
+                        startFreezeRound();
+                    } else {
+                        showPose();
+                    }
                 }
-            }, 600);
+            }, 700);
         }
 
-        function showPrompt() {
-            state.phase = 'prompt';
+        function showPose() {
+            state.phase = 'pose';
 
-            // Pick random prompt
-            const promptKeys = Object.keys(PROMPTS);
-            const key = promptKeys[Math.floor(Math.random() * promptKeys.length)];
-            state.currentPrompt = { key, ...PROMPTS[key] };
+            let poseKey;
 
-            // Determine if fake (red prompt)
-            state.isFake = Math.random() < state.config.fakeChance;
-
-            const promptEl = document.getElementById('prompt-text');
-            const subtitleEl = document.getElementById('prompt-subtitle');
-            const iconsEl = document.getElementById('hand-icons');
-
-            promptEl.textContent = state.currentPrompt.text;
-            promptEl.classList.remove('fake');
-
-            if (state.isFake) {
-                promptEl.classList.add('fake');
-                subtitleEl.textContent = "DON'T MOVE!";
+            if (state.currentTwist === 'copycat' && state.lastPose) {
+                poseKey = state.lastPose;
+                document.getElementById('pose-silhouette').innerHTML = POSES[poseKey].svg;
+                document.getElementById('pose-text').textContent = 'COPYCAT!';
+                document.getElementById('pose-hint').textContent = 'do the last pose again';
+                showCommentary('twist_copycat');
             } else {
-                subtitleEl.textContent = '';
+                do {
+                    poseKey = POSE_KEYS[Math.floor(Math.random() * POSE_KEYS.length)];
+                } while (poseKey === state.lastPose && POSE_KEYS.length > 1);
+
+                const pose = POSES[poseKey];
+                document.getElementById('pose-silhouette').innerHTML = pose.svg;
+                document.getElementById('pose-text').textContent = pose.name;
+                document.getElementById('pose-hint').textContent = pose.hint;
             }
 
-            promptEl.classList.add('show');
-            subtitleEl.classList.add('show');
-            iconsEl.classList.add('show');
+            state.currentPose = { key: poseKey, ...POSES[poseKey] };
+            state.lastPose = poseKey;
 
-            // Update icons
-            updatePromptIcons();
+            if (state.currentTwist === 'opposite') {
+                document.getElementById('pose-hint').textContent = 'DO ANY OTHER POSE!';
+                showCommentary('twist_opposite');
+            }
 
-            // Start reaction timer
-            state.reactionStart = Date.now();
-            const reactionWindow = Math.max(
-                state.config.minTime,
-                state.config.baseTime - (state.round * state.config.timeDecrease)
+            document.getElementById('pose-prompt').classList.add('show');
+
+            const reactionTime = Math.max(
+                config.minReactionTime,
+                config.baseReactionTime - (state.currentRound * 200)
             );
 
             const timerBar = document.getElementById('timer-bar');
             timerBar.style.transition = 'none';
-            timerBar.style.width = '100%';
+            timerBar.style.transform = 'scaleX(1)';
             void timerBar.offsetWidth;
-            timerBar.style.transition = `width ${reactionWindow}ms linear`;
-            timerBar.style.width = '0%';
+            timerBar.style.transition = `transform ${reactionTime}ms linear`;
+            timerBar.style.transform = 'scaleX(0)';
 
-            // End round after time
+            if (state.currentTwist === 'bait') {
+                setTimeout(() => {
+                    if (state.phase === 'pose' || state.phase === 'holding') {
+                        let newKey;
+                        do {
+                            newKey = POSE_KEYS[Math.floor(Math.random() * POSE_KEYS.length)];
+                        } while (newKey === poseKey);
+
+                        state.currentPose = { key: newKey, ...POSES[newKey] };
+                        state.lastPose = newKey;
+
+                        document.getElementById('pose-prompt').classList.add('bait');
+                        document.getElementById('pose-silhouette').innerHTML = POSES[newKey].svg;
+                        document.getElementById('pose-text').textContent = 'WAIT - ' + POSES[newKey].name;
+                        document.getElementById('pose-hint').textContent = POSES[newKey].hint;
+
+                        showCommentary('twist_bait');
+
+                        state.phase = 'pose';
+                        state.holdStart = 0;
+                    }
+                }, reactionTime * 0.4);
+            }
+
             state.timerInterval = setTimeout(() => {
-                judgeRound();
-            }, reactionWindow);
-
-            state.phase = 'reacting';
-        }
-
-        function updatePromptIcons() {
-            const left = document.getElementById('icon-left');
-            const right = document.getElementById('icon-right');
-
-            left.classList.remove('required', 'active');
-            right.classList.remove('required', 'active');
-
-            if (state.isFake) return;
-
-            switch (state.currentPrompt.icon) {
-                case 'left':
-                    left.classList.add('required');
-                    break;
-                case 'right':
-                    right.classList.add('required');
-                    break;
-                case 'both':
-                    left.classList.add('required');
-                    right.classList.add('required');
-                    break;
-                case 'none':
-                    // Neither required
-                    break;
-            }
-        }
-
-        function checkPlayerReaction() {
-            if (state.phase !== 'reacting') return;
-
-            const handState = {
-                left: state.hands.left.up,
-                right: state.hands.right.up
-            };
-
-            // Update icons based on current hand state
-            document.getElementById('icon-left').classList.toggle('active', handState.left);
-            document.getElementById('icon-right').classList.toggle('active', handState.right);
-
-            // For now, simulate single player checking (in real multiplayer, each player would have their own tracking)
-            // This tracks the "current player" state
-            const isCorrect = state.isFake
-                ? (!handState.left && !handState.right) // Fake = don't move
-                : state.currentPrompt.check(handState);
-
-            // Store state for judging
-            state.playerStates = [{
-                correct: isCorrect,
-                handState: { ...handState },
-                reactionTime: Date.now() - state.reactionStart
-            }];
-        }
-
-        function judgeRound() {
-            state.phase = 'judging';
-            clearTimeout(state.timerInterval);
-
-            const promptEl = document.getElementById('prompt-text');
-            const subtitleEl = document.getElementById('prompt-subtitle');
-            const iconsEl = document.getElementById('hand-icons');
-            const resultEl = document.getElementById('result-overlay');
-
-            promptEl.classList.remove('show');
-            subtitleEl.classList.remove('show');
-            iconsEl.classList.remove('show');
-
-            // Get current hand state for final judgment
-            const handState = {
-                left: state.hands.left.up,
-                right: state.hands.right.up
-            };
-
-            const isCorrect = state.isFake
-                ? (!handState.left && !handState.right)
-                : state.currentPrompt.check(handState);
-
-            const reactionTime = Date.now() - state.reactionStart;
-
-            // For demo: randomly pick a loser from alive players
-            const alivePlayers = state.players.filter(p => !p.eliminated);
-
-            // In real implementation, track who was last/wrong
-            // For now, simulate based on hand tracking correctness
-            let loserIndex = Math.floor(Math.random() * alivePlayers.length);
-
-            // If player (camera) got it wrong, they're always the loser
-            if (!isCorrect) {
-                loserIndex = 0; // First player represents the person on camera
-            }
-
-            const loser = alivePlayers[loserIndex];
-
-            // Determine penalty
-            let drinks = 1;
-            let roastCategory = 'slow';
-            let resultText = 'TOO SLOW';
-            let resultClass = 'wrong';
-
-            if (state.isFake && (handState.left || handState.right)) {
-                drinks = 2;
-                roastCategory = 'fake';
-                resultText = 'FELL FOR IT';
-                resultClass = 'pathetic';
-            } else if (!isCorrect && !state.isFake) {
-                drinks = 2;
-                roastCategory = 'wrong';
-                resultText = 'WRONG!';
-                resultClass = 'wrong';
-            }
-
-            // Apply penalty
-            loser.drinks += drinks;
-            loser.consecutiveLosses++;
-            state.totalDrinks += drinks;
-
-            // Check for consecutive loss penalty
-            if (loser.consecutiveLosses >= 3) {
-                resultText = 'PATHETIC! FINISH IT!';
-                resultClass = 'pathetic';
-                loser.consecutiveLosses = 0;
-            }
-
-            // Reset others' consecutive losses
-            state.players.forEach(p => {
-                if (p.id !== loser.id) p.consecutiveLosses = 0;
-            });
-
-            // Sudden death elimination
-            if (state.mode === 'sudden' && !isCorrect) {
-                loser.eliminated = true;
-                resultText = `${loser.name} ELIMINATED`;
-            }
-
-            // Track fastest reaction
-            if (isCorrect && reactionTime < state.fastestReaction) {
-                state.fastestReaction = reactionTime;
-            }
-
-            // Show result
-            resultEl.textContent = resultText;
-            resultEl.className = `result-overlay ${resultClass} show`;
-
-            // Update UI
-            document.getElementById(`slot-${loser.id}`).classList.add('loser');
-            document.getElementById(`status-${loser.id}`).textContent = `+${drinks} DRINK${drinks > 1 ? 'S' : ''}`;
-
-            // Mark others as safe
-            alivePlayers.forEach(p => {
-                if (p.id !== loser.id && !p.eliminated) {
-                    document.getElementById(`slot-${p.id}`).classList.add('safe');
-                    document.getElementById(`status-${p.id}`).textContent = 'SAFE';
+                if (state.phase === 'pose' || state.phase === 'holding') {
+                    judgeRound(false);
                 }
-            });
+            }, reactionTime);
+        }
 
-            renderPlayerGrid();
-            renderShameBoard();
+        function startSpeedRound() {
+            showCommentary('twist_speed');
+            let speedCount = 0;
+            let speedSuccess = 0;
 
-            // Flash screen
-            document.getElementById('game-container').classList.add('screen-flash');
+            function nextSpeedPose() {
+                speedCount++;
+                if (speedCount > 3) {
+                    const success = speedSuccess >= 2;
+                    judgeRound(success);
+                    return;
+                }
+
+                state.phase = 'speed_pose';
+
+                const poseKey = POSE_KEYS[Math.floor(Math.random() * POSE_KEYS.length)];
+                state.currentPose = { key: poseKey, ...POSES[poseKey] };
+
+                document.getElementById('pose-silhouette').innerHTML = POSES[poseKey].svg;
+                document.getElementById('pose-text').textContent = POSES[poseKey].name;
+                document.getElementById('pose-hint').textContent = `${speedCount}/3`;
+                document.getElementById('pose-prompt').classList.add('show');
+
+                const timerBar = document.getElementById('timer-bar');
+                timerBar.style.transition = 'none';
+                timerBar.style.transform = 'scaleX(1)';
+                void timerBar.offsetWidth;
+                timerBar.style.transition = 'transform 1.2s linear';
+                timerBar.style.transform = 'scaleX(0)';
+
+                state.speedTimeout = setTimeout(() => {
+                    if (state.phase === 'speed_pose' || state.phase === 'speed_holding') {
+                        document.getElementById('pose-prompt').classList.remove('show');
+                        setTimeout(nextSpeedPose, 300);
+                    }
+                }, 1200);
+            }
+
+            state.speedSuccess = () => {
+                speedSuccess++;
+                clearTimeout(state.speedTimeout);
+                document.getElementById('pose-prompt').classList.remove('show');
+                document.getElementById('match-status').classList.remove('show');
+                setTimeout(nextSpeedPose, 300);
+            };
+
+            nextSpeedPose();
+        }
+
+        function startFreezeRound() {
+            showCommentary('twist_freeze');
+            state.phase = 'freeze_wait';
+
+            document.getElementById('pose-silhouette').innerHTML = '';
+            document.getElementById('pose-text').textContent = 'MOVE AROUND...';
+            document.getElementById('pose-hint').textContent = 'freeze when told';
+            document.getElementById('pose-prompt').classList.add('show');
+
+            const freezeDelay = 1500 + Math.random() * 2000;
+
             setTimeout(() => {
-                document.getElementById('game-container').classList.remove('screen-flash');
-            }, 300);
+                state.phase = 'freeze_check';
+                state.freezeStartLandmarks = state.landmarks ? [...state.landmarks] : null;
 
-            // Next round after delay
+                document.getElementById('pose-text').textContent = 'FREEZE!';
+                document.getElementById('pose-hint').textContent = "DON'T MOVE";
+                document.getElementById('pose-prompt').classList.add('bait');
+
+                setTimeout(() => {
+                    const moved = checkIfMoved();
+                    judgeRound(!moved);
+                }, 1500);
+            }, freezeDelay);
+        }
+
+        function checkIfMoved() {
+            if (!state.freezeStartLandmarks || !state.landmarks) return false;
+
+            const startLeft = state.freezeStartLandmarks[15];
+            const startRight = state.freezeStartLandmarks[16];
+            const nowLeft = state.landmarks[15];
+            const nowRight = state.landmarks[16];
+
+            const leftMove = Math.hypot(nowLeft.x - startLeft.x, nowLeft.y - startLeft.y);
+            const rightMove = Math.hypot(nowRight.x - startRight.x, nowRight.y - startRight.y);
+
+            return leftMove > 0.08 || rightMove > 0.08;
+        }
+
+        function checkPose() {
+            if (!state.landmarks) return;
+
+            if (state.phase === 'speed_pose' || state.phase === 'speed_holding') {
+                const isMatch = state.currentPose.check(state.landmarks);
+                const matchStatus = document.getElementById('match-status');
+
+                if (isMatch) {
+                    if (state.phase === 'speed_pose') {
+                        state.phase = 'speed_holding';
+                        state.holdStart = Date.now();
+                        matchStatus.textContent = 'HOLD...';
+                        matchStatus.classList.add('show', 'holding');
+                    } else {
+                        const holdDuration = Date.now() - state.holdStart;
+                        if (holdDuration >= 300) {
+                            matchStatus.textContent = 'GOT IT!';
+                            matchStatus.classList.add('matched');
+                            state.speedSuccess();
+                        }
+                    }
+                } else if (state.phase === 'speed_holding') {
+                    state.phase = 'speed_pose';
+                    matchStatus.classList.remove('holding', 'matched');
+                }
+                return;
+            }
+
+            if (state.phase !== 'pose' && state.phase !== 'holding') return;
+
+            let isMatch;
+
+            if (state.currentTwist === 'opposite') {
+                isMatch = false;
+                for (const [key, pose] of Object.entries(POSES)) {
+                    if (key !== state.currentPose.key && pose.check(state.landmarks)) {
+                        isMatch = true;
+                        break;
+                    }
+                }
+            } else {
+                isMatch = state.currentPose.check(state.landmarks);
+            }
+
+            const matchStatus = document.getElementById('match-status');
+
+            if (isMatch) {
+                if (state.phase === 'pose') {
+                    state.phase = 'holding';
+                    state.holdStart = Date.now();
+                    matchStatus.textContent = 'HOLD IT...';
+                    matchStatus.classList.add('show', 'holding');
+                    matchStatus.classList.remove('matched');
+                } else if (state.phase === 'holding') {
+                    const holdDuration = Date.now() - state.holdStart;
+                    if (holdDuration >= config.holdTime) {
+                        matchStatus.textContent = 'MATCHED!';
+                        matchStatus.classList.add('matched');
+                        matchStatus.classList.remove('holding');
+                        judgeRound(true);
+                    } else {
+                        matchStatus.textContent = `HOLD ${Math.ceil((config.holdTime - holdDuration) / 100)}...`;
+                    }
+                }
+            } else if (state.phase === 'holding') {
+                state.phase = 'pose';
+                matchStatus.classList.remove('holding', 'matched');
+                matchStatus.textContent = 'ALMOST...';
+            }
+        }
+
+        function judgeRound(success) {
+            clearTimeout(state.timerInterval);
+            state.phase = 'result';
+
+            document.getElementById('pose-prompt').classList.remove('show', 'bait');
+            document.getElementById('match-status').classList.remove('show', 'holding', 'matched');
+
+            const resultEl = document.getElementById('result-overlay');
+            const resultText = document.getElementById('result-text');
+            const resultSub = document.getElementById('result-sub');
+
+            if (success) {
+                state.roundScore++;
+                resultText.textContent = 'NICE';
+                resultText.className = 'result-text success';
+                resultSub.textContent = `${state.roundScore}/${config.roundsPerPlayer}`;
+                showCommentary('success');
+            } else {
+                resultText.textContent = 'NOPE';
+                resultText.className = 'result-text fail';
+                resultSub.textContent = state.currentPose ? state.currentPose.name : '';
+                showCommentary('fail');
+            }
+
+            document.getElementById('score-val').textContent = `${state.roundScore}/${config.roundsPerPlayer}`;
+
+            resultEl.classList.add('show');
+
             setTimeout(() => {
                 resultEl.classList.remove('show');
                 startRound();
-            }, 2500);
+            }, 1800);
         }
 
-        function endGame() {
-            state.running = false;
-            document.getElementById('game-screen').style.display = 'none';
-            document.getElementById('win-screen').style.display = 'flex';
-
-            // Find biggest loser
-            const sorted = [...state.players].sort((a, b) => b.drinks - a.drinks);
-            const loser = sorted[0];
-            const winner = sorted[sorted.length - 1];
-
-            document.getElementById('loser-text').textContent =
-                `${loser.name} IS THE BIGGEST DISAPPOINTMENT`;
-
-            document.getElementById('stat-rounds').textContent = state.round - 1;
-            document.getElementById('stat-drinks').textContent = state.totalDrinks;
-            document.getElementById('stat-fastest').textContent =
-                state.fastestReaction < 9999 ? `${state.fastestReaction}ms` : 'N/A';
-            document.getElementById('stat-shamed').textContent = loser.name;
-
-            // Pick roast
-            const roasts = loser.drinks > 5 ? ROASTS.loser : ROASTS.winner;
-            document.getElementById('roast-text').textContent =
-                roasts[Math.floor(Math.random() * roasts.length)];
+        function showCommentary(type) {
+            const el = document.getElementById('commentary');
+            el.textContent = randomFrom(COMMENTARY[type] || COMMENTARY.success);
+            el.classList.remove('show');
+            void el.offsetWidth;
+            el.classList.add('show');
         }
 
-        function resetGame() {
-            document.getElementById('win-screen').style.display = 'none';
-            document.getElementById('setup-screen').style.display = 'flex';
+        // ============ RESULTS ============
+        function showResults() {
+            showScreen('results-screen');
+
+            const score = state.roundScore;
+            const verdict = VERDICTS[score];
+
+            document.getElementById('results-player').textContent = state.currentPlayer;
+            document.getElementById('results-score').textContent = `${score}/5`;
+            document.getElementById('results-verdict').textContent = verdict.text;
+
+            if (verdict.drinks > 0) {
+                state.playerDrinks[state.currentPlayer] += verdict.drinks;
+                document.getElementById('results-drinks').textContent = `🍺 ${verdict.drinkText.toUpperCase()}`;
+            } else if (verdict.canNominate) {
+                document.getElementById('results-drinks').textContent = '🍺 NOMINATE SOMEONE TO DRINK';
+            } else {
+                document.getElementById('results-drinks').textContent = '';
+            }
+
+            const commentType = score === 5 ? 'perfect' : score <= 1 ? 'pathetic' : 'success';
+            document.getElementById('results-commentary').textContent = randomFrom(COMMENTARY[commentType]);
+
+            state.playedPlayers.push(state.currentPlayer);
+
+            const nominateSection = document.getElementById('nominate-section');
+            const nominateTitle = document.getElementById('nominate-title');
+            const nominateButtons = document.getElementById('nominate-buttons');
+
+            const remainingPlayers = state.players.filter(p => !state.playedPlayers.includes(p));
+
+            if (remainingPlayers.length === 0) {
+                nominateSection.style.display = 'none';
+                setTimeout(showEndScreen, 2000);
+            } else if (verdict.wheelShame) {
+                nominateTitle.textContent = randomFrom(COMMENTARY.wheel_shame);
+                nominateButtons.innerHTML = '<button class="nominate-btn" onclick="triggerWheelOfShame()">SPIN THE WHEEL</button>';
+            } else if (verdict.canNominate) {
+                nominateTitle.textContent = randomFrom(COMMENTARY.nomination) + ' (THEY DRINK + GO NEXT)';
+                nominateButtons.innerHTML = remainingPlayers.map(p =>
+                    `<button class="nominate-btn" onclick="nominatePlayer('${p}', true)">${p}</button>`
+                ).join('');
+            } else {
+                nominateTitle.textContent = 'WHO\'S NEXT?';
+                nominateButtons.innerHTML = remainingPlayers.map(p =>
+                    `<button class="nominate-btn" onclick="nominatePlayer('${p}', false)">${p}</button>`
+                ).join('');
+            }
         }
 
-        // ============ HAND TRACKING ============
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        window.nominatePlayer = function(name, withDrink) {
+            if (withDrink) {
+                state.playerDrinks[name] = (state.playerDrinks[name] || 0) + 1;
+            }
+            state.currentPlayer = name;
+            startHotSeat();
+        };
+
+        window.triggerWheelOfShame = function() {
+            showWheelScreen('WHEEL OF SHAME');
+        };
+
+        // ============ END SCREEN ============
+        function showEndScreen() {
+            showScreen('end-screen');
+
+            const sorted = Object.entries(state.playerDrinks)
+                .sort((a, b) => b[1] - a[1]);
+
+            const leaderboard = document.getElementById('leaderboard');
+            leaderboard.innerHTML = sorted.map(([name, drinks], i) => `
+                <div class="leaderboard-row">
+                    <span class="rank">${i + 1}.</span>
+                    <span class="name">${name}</span>
+                    <span class="drinks">${drinks} 🍺</span>
+                </div>
+            `).join('');
+
+            const totalDrinks = Object.values(state.playerDrinks).reduce((a, b) => a + b, 0);
+            const avgDrinks = totalDrinks / state.players.length;
+            const roastType = avgDrinks < 1 ? 'good' : avgDrinks < 2 ? 'mid' : 'bad';
+            document.getElementById('end-roast').textContent = randomFrom(END_ROASTS[roastType]);
+        }
+
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            state.players = [];
+            state.playedPlayers = [];
+            state.playerDrinks = {};
+            document.getElementById('webcam-area').classList.add('hidden');
+            updatePlayerList();
+            showScreen('title-screen');
         });
 
-        hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 0,
+        // ============ POSE DETECTION ============
+        const pose = new Pose({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        });
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
 
-        hands.onResults(onHandResults);
-
-        function onHandResults(results) {
-            // Reset
-            state.hands.left.up = false;
-            state.hands.right.up = false;
-
-            document.getElementById('hand-left').style.display = 'none';
-            document.getElementById('hand-right').style.display = 'none';
-
-            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-                if (state.phase === 'reacting') checkPlayerReaction();
-                return;
+        pose.onResults((results) => {
+            if (results.poseLandmarks) {
+                state.landmarks = results.poseLandmarks;
+                checkPose();
             }
-
-            results.multiHandLandmarks.forEach((landmarks, idx) => {
-                const wrist = landmarks[0];
-                const isUp = wrist.y < 0.45; // Hand raised threshold
-
-                // Determine which hand based on x position (mirrored)
-                const side = wrist.x > 0.5 ? 'left' : 'right';
-
-                state.hands[side].up = isUp;
-                state.hands[side].x = (1 - wrist.x) * 400; // Webcam preview width
-                state.hands[side].y = wrist.y * 280; // Webcam preview height
-
-                // Update indicator
-                const indicator = document.getElementById(`hand-${side}`);
-                indicator.style.display = 'block';
-                indicator.style.left = state.hands[side].x + 'px';
-                indicator.style.top = state.hands[side].y + 'px';
-            });
-
-            if (state.phase === 'reacting') {
-                checkPlayerReaction();
-            }
-        }
+        });
 
         // ============ SETUP ============
         async function setup() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480, facingMode: 'user' }
+                    video: { width: 1280, height: 720, facingMode: 'user' }
                 });
                 video.srcObject = stream;
                 previewVideo.srcObject = stream;
@@ -1388,16 +2059,17 @@
 
                 const cam = new Camera(video, {
                     onFrame: async () => {
-                        await hands.send({ image: video });
+                        await pose.send({ image: video });
                     },
-                    width: 640,
-                    height: 480
+                    width: 1280,
+                    height: 720
                 });
                 await cam.start();
 
                 document.getElementById('loading').classList.add('hidden');
             } catch (e) {
-                document.getElementById('loading').textContent = 'CAMERA ERROR: ' + e.message;
+                document.getElementById('loading').innerHTML =
+                    `CAMERA ERROR<br><span style="font-size:10px;color:#888;">${e.message}</span>`;
             }
         }
 

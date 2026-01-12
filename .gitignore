@@ -1,0 +1,13 @@
+# Session context (local notes, not for repo)
+CONTEXT.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
